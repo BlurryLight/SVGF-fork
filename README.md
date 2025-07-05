@@ -21,6 +21,7 @@ It's also not really optimized, although the filtering part is quite fast, the p
     Cuda installed on the system
     NVidia GPU (for Cuda)
     CUDA_PATH environment variable set (example  "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8" )
+    OPTIX_DIR environment variable set (example "C:\ProgramData\NVIDIA Corporation\OptiX SDK 8.0.0" )
 
 ## Commands : 
 ```

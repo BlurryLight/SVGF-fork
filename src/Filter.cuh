@@ -416,7 +416,7 @@ FN_DECL float computeWeight(
     float phiIllum
 )
 {
-    const float weightNormal = pow(saturate(dot(normalCenter, normalP)), phiNormal);
+    const float weightNormal = pow(__saturatef(dot(normalCenter, normalP)), phiNormal);
     const float weightZ = (phiDepth == 0) ? 0.0f : abs(depthCenter - depthP) / phiDepth;
     
     const float weightLillum = abs(luminanceIllumCenter - luminanceIllumP) / phiIllum;

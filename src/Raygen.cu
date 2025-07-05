@@ -49,9 +49,9 @@ FN_DECL sceneIntersection IntersectTLAS(ray Ray, int Sample, int Bounce)
     uint TriangleStartInx = IndexData.triangleDataStartInx;
     Isect.PrimitiveIndex = Payload.PrimitiveIndex + TriangleStartInx;
 
-    Isect.U = uint_as_float(Payload.U);
-    Isect.V = uint_as_float(Payload.V);
-    Isect.Distance = uint_as_float(Payload.Distance);
+    Isect.U = __uint_as_float(Payload.U);
+    Isect.V = __uint_as_float(Payload.V);
+    Isect.Distance = __uint_as_float(Payload.Distance);
     Isect.MaterialIndex = TLASInstancesBuffer[Isect.InstanceIndex].Material;
     return Isect;
 

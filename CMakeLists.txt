@@ -1,4 +1,5 @@
-project(gpuPathTracing CXX CUDA)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+project(gpuPathTracing CXX CUDA C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD  17)
 set(CUDA_STANDARD_REQUIRED  ON)
@@ -71,15 +72,34 @@ SET(OIDN_DEVICE_CPU OFF)
 SET(OIDN_DEVICE_CUDA ON)
 add_subdirectory(submodules/oidn)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CUDA_ARCHITECTURES "52;60;70;75")
+
+# OptiX
+if(NOT DEFINED ENV{OptiX_DIR})
+    message(FATAL_ERROR "NO OPTIX_DIR SET")
+endif()
+
+if(NOT EXISTS "$ENV{OptiX_DIR}/include/optix.h")
+    message(FATAL_ERROR "NO optix.h FOUND IN $ENV{OptiX_DIR}/include")
+endif()
+
+set(OptiX_ROOT_DIR $ENV{OptiX_DIR})
+
 # Optix
 set(OPTIX_DIR $ENV{OptiX_DIR}/include)
-Message(${OPTIX_DIR})
-include_directories(${OPTIX_DIR})
+
+include(cmake/FindOptix.cmake)
+include_directories(${OptiX_INCLUDE_DIR})
 
 find_package(CUDA REQUIRED)
 enable_language(CUDA)
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo -std=c++11 --generate-line-info)
+if (MSVC)
+
+else()
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo -std=c++11 --generate-line-info)
+endif()
 
 
 set(CUDA_LIB_DIR "$ENV{CUDA_PATH}/lib/x64")
@@ -123,7 +143,7 @@ foreach(source_file ${optixSource})
     add_custom_command(
         OUTPUT ${ptx_file}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
-        ARGS ${CUDA_NVCC_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR}
+        ARGS ${CUDA_NVCC_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR} -DUSE_OPTIX=${USE_OPTIX}
         # ARGS ${CUDA_NVCC_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR}
         DEPENDS ${source_file}
     )
@@ -145,7 +165,6 @@ target_link_libraries(PathTracer ${CUDA_LIBRARIES} ${OptiX_LIBRARIES})
 set_property(TARGET PathTracer PROPERTY CXX_STANDARD 17)
 set_property(TARGET PathTracer PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET PathTracer PROPERTY CUDA_STANDARD 17)
-
 target_compile_definitions(PathTracer PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
 
