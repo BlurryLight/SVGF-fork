@@ -95,10 +95,17 @@ include_directories(${OptiX_INCLUDE_DIR})
 find_package(CUDA REQUIRED)
 enable_language(CUDA)
 
-if (MSVC)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo --generate-line-info)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20012) # Suppress warning about host/device label on default constructor
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20013) # Suppress constexpr functoin
 
-else()
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo -std=c++11 --generate-line-info)
+if(MSVC)
+    # utf8
+    # ddisbale 4819
+    add_compile_options("/utf-8")
+    add_compile_options("/wd4819")
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler "/wd4819,/utf-8")
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
 

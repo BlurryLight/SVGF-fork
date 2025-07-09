@@ -409,7 +409,7 @@ void LoadGLTF(std::string FileName, scene *Scene, bool DoLoadInstances, bool DoL
         
     if(!OK) 
     {
-        printf("Could not load model %s \n",FileName);
+        printf("Could not load model %s \n",FileName.c_str());
         return;
     }
 
