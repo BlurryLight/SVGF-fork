@@ -1,0 +1,33 @@
+# Clangd configuration for CUDA and OptiX project
+
+# Suppress warnings/errors that clangd can't understand
+Diagnostics:
+  Suppress:
+    - unknown_builtin_func  # Suppress unknown builtin function warnings
+    - unknown_cpp_attribute  # For CUDA attributes
+
+# Add compilation flags for CUDA/OptiX understanding
+CompileFlags:
+  Add:
+    # Define CUDA device code mode
+    - -xcuda
+    - -fno-cuda-version-check
+    # Include CUDA headers
+    - -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2\\include"
+    # Include OptiX headers
+    - -I"C:\\ProgramData\\NVIDIA Corporation\\OptiX SDK 8.0.0\\include"
+    # Include project headers
+    - -ID:\\coderepo\\SVGF\\src
+    - -ID:\\coderepo\\SVGF\\submodules\\glm
+    - -ID:\\coderepo\\SVGF\\submodules\\tinygltf
+    - -ID:\\coderepo\\SVGF\\submodules\\stb
+    # CUDA defines
+    - -DUSE_OPTIX=1
+    - -DAPI=1
+    - -DAPI_CU=1
+    - -DAPI_GL=0
+
+# InlayHints:
+#   Enabled: true
+#   ParameterHints: true
+#   TypeHints: true

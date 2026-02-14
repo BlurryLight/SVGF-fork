@@ -98,5 +98,14 @@
         "unordered_set": "cpp",
         "variant": "cpp",
         "*.isph": "cpp"
-    }
+    },
+    // ========== Clangd Configuration for CUDA/OptiX ==========
+    "[cuda]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "clangd.checkUpdates": false,
+    "C_Cpp.intelliSenseEngine": "disabled"
 }
