@@ -358,7 +358,7 @@ void scene::CalculateInstanceTransform(int Inx)
 
     Instance.InverseTransform = glm::inverse(Instance.Transform);
     Instance.NormalTransform = glm::inverseTranspose(Instance.Transform);
-    blas *BVH = Shapes[Instance.Shape].BVH.get();
+    blas *BVH = Shapes.at(Instance.Shape).BVH.get();
     glm::vec3 Min = BVH->BVHNodes[0].AABBMin;
     glm::vec3 Max = BVH->BVHNodes[0].AABBMax;
     Instance.Bounds = {};

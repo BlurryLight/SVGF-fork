@@ -177,6 +177,7 @@ void LoadAssimp(std::string FileName, scene *Scene, bool DoLoadInstances, bool D
     if (!AScene || AScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !AScene->mRootNode) {
         std::string Error = Importer.GetErrorString();
         std::cout << Error << std::endl;
+        throw std::runtime_error("Failed to load model: " + FileName);
         return;
     }
 
