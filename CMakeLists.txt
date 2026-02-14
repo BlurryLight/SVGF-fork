@@ -117,10 +117,13 @@ message(STATUS "[DEBUG] CUDA_VERSION: ${CUDAToolkit_VERSION}")
 message(STATUS "[DEBUG] CUDA_TOOLKIT_ROOT: ${CUDAToolkit_ROOT}")
 message(STATUS "[DEBUG] CUDA_NVCC_EXECUTABLE: ${CUDAToolkit_NVCC_EXECUTABLE}")
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo --generate-line-info)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20012) # Suppress warning about host/device label on default constructor
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20013) # Suppress constexpr functoin
-message(STATUS "[DEBUG] CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+# Configure CUDA-specific flags using modern CMake CUDA support
+list(APPEND CMAKE_CUDA_FLAGS "-lineinfo")
+list(APPEND CMAKE_CUDA_FLAGS "--generate-line-info")
+list(APPEND CMAKE_CUDA_FLAGS "-diag-suppress=20012") # Suppress warning about host/device label on default constructor
+list(APPEND CMAKE_CUDA_FLAGS "-diag-suppress=20013") # Suppress constexpr function
+
+message(STATUS "[DEBUG] CMAKE_CUDA_FLAGS: ${CMAKE_CUDA_FLAGS}")
 message(STATUS "[DEBUG] CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
 
 set(CUDA_LIB_DIR "$ENV{CUDA_PATH}/lib/x64")
@@ -130,6 +133,7 @@ message(STATUS "[DEBUG] CUDA_LIB_DIR: ${CUDA_LIB_DIR}")
 # These will be applied only to the main target, not to subprojects
 set(PATHTRACER_COMPILE_OPTS)
 set(PATHTRACER_COMPILE_DEFS ${PROJECT_DEFINES} "USE_OPTIX=${USE_OPTIX}")
+set(PATHTRACER_CUDA_OPTS)
 
 if(MSVC)
     message(STATUS "[DEBUG] MSVC Compiler detected")
@@ -139,8 +143,9 @@ if(MSVC)
     list(APPEND PATHTRACER_COMPILE_OPTS "/utf-8" "/wd4819")
     list(APPEND PATHTRACER_COMPILE_DEFS "_CRT_SECURE_NO_WARNINGS")
     
-    # For CUDA compile with MSVC
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler "/wd4819,/utf-8")
+    # For CUDA compile with MSVC - use proper syntax
+    list(APPEND PATHTRACER_CUDA_OPTS "-Xcompiler=/utf-8")
+    list(APPEND PATHTRACER_CUDA_OPTS "-Xcompiler=/wd4819")
 endif()
 
 set (sourceFiles
@@ -181,8 +186,7 @@ foreach(source_file ${optixSource})
     add_custom_command(
         OUTPUT ${ptx_file}
         COMMAND ${CUDAToolkit_NVCC_EXECUTABLE}
-        ARGS ${CUDA_NVCC_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR} -DUSE_OPTIX=${USE_OPTIX}
-        # ARGS ${CUDA_NVCC_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR}
+        ARGS ${CMAKE_CUDA_FLAGS} -ptx ${source_file} -o ${ptx_file} -I ${OPTIX_DIR} -I ${GLM_INC_DIR} -DUSE_OPTIX=${USE_OPTIX}
         DEPENDS ${source_file}
     )
     list(APPEND PTX_FILES ${ptx_file})
@@ -215,7 +219,10 @@ target_include_directories(PathTracer PRIVATE
 )
 
 # Add target-specific compile options
-target_compile_options(PathTracer PRIVATE ${PATHTRACER_COMPILE_OPTS})
+target_compile_options(PathTracer PRIVATE 
+    $<$<COMPILE_LANGUAGE:CXX>:${PATHTRACER_COMPILE_OPTS}>
+    $<$<COMPILE_LANGUAGE:CUDA>:${PATHTRACER_CUDA_OPTS}>
+)
 
 # Add target-specific compile definitions
 target_compile_definitions(PathTracer PRIVATE ${PATHTRACER_COMPILE_DEFS})

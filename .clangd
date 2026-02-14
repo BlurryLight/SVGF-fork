@@ -22,7 +22,7 @@ CompileFlags:
     - -ID:\\coderepo\\SVGF\\submodules\\tinygltf
     - -ID:\\coderepo\\SVGF\\submodules\\stb
     # CUDA defines
-    - -DUSE_OPTIX=1
+    - -DUSE_OPTIX=0
     - -DAPI=1
     - -DAPI_CU=1
     - -DAPI_GL=0

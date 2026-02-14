@@ -652,7 +652,11 @@ FN_DECL float SampleLightsPDF(INOUT(vec3) Position, INOUT(vec3) Direction, scene
                 
                 sceneIntersection Isect;
                 Isect.Distance = MAX_LENGTH;
+                #if USE_OPTIX
                 IntersectInstance(Ray, Isect);
+                #else 
+                IntersectInstance(Ray, Isect, Lights[i].Instance);
+                #endif
                 if(OutIsect != nullptr && Bounce==0)
                     *OutIsect = Isect;
 
