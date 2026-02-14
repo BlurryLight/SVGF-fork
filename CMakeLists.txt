@@ -1,4 +1,16 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+
+# Prefer NVCC on Windows to avoid clang CUDA flag mismatches.
+if(WIN32 AND NOT DEFINED CMAKE_CUDA_COMPILER)
+  if(DEFINED ENV{CUDA_PATH})
+    set(CMAKE_CUDA_COMPILER "$ENV{CUDA_PATH}/bin/nvcc.exe" CACHE FILEPATH "CUDA compiler" FORCE)
+  endif()
+endif()
+
+if(NOT DEFINED CUDAToolkit_ROOT AND DEFINED ENV{CUDA_PATH})
+  set(CUDAToolkit_ROOT "$ENV{CUDA_PATH}" CACHE PATH "CUDA Toolkit root" FORCE)
+endif()
+
 project(gpuPathTracing CXX CUDA C)
 
 # ========== DEBUG INFO ==========
@@ -95,7 +107,7 @@ SET(OIDN_DEVICE_CUDA OFF)
 # add_subdirectory(submodules/oidn)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CUDA_ARCHITECTURES "52;60;70;75")
+set(CMAKE_CUDA_ARCHITECTURES "75")
 
 # ========== OptiX Configuration ==========
 message(STATUS "[DEBUG] Searching for OptiX...")
@@ -151,8 +163,8 @@ if(MSVC)
     list(APPEND PATHTRACER_COMPILE_DEFS "_CRT_SECURE_NO_WARNINGS")
     
     # For CUDA compile with MSVC - use proper syntax
-    list(APPEND PATHTRACER_CUDA_OPTS "-Xcompiler=/utf-8")
-    list(APPEND PATHTRACER_CUDA_OPTS "-Xcompiler=/wd4819")
+    list(APPEND PATHTRACER_CUDA_OPTS -Xcompiler="/utf-8")
+    list(APPEND PATHTRACER_CUDA_OPTS -Xcompiler="/wd4819")
 endif()
 
 set (sourceFiles
