@@ -59,7 +59,8 @@ window::window(uint32_t Width, uint32_t Height)
 
     glfwSetWindowUserPointer(this->Handle, (void*)this);
 
-    int version = gladLoadGL(glfwGetProcAddress);
+    // int version = gladLoadGL(glfwGetProcAddress);
+    int version = gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
     if (version == 0) {
         printf("Failed to initialize OpenGL context\n");
         exit(0);

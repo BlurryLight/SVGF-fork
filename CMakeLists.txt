@@ -1,5 +1,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 project(gpuPathTracing CXX CUDA C)
+
+# ========== DEBUG INFO ==========
+message(STATUS "========== Project Configuration Start ==========")
+message(STATUS "CMAKE_VERSION: ${CMAKE_VERSION}")
+message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}")
+message(STATUS "CMAKE_GENERATOR: ${CMAKE_GENERATOR}")
+message(STATUS "========== End Debug Info ==========")
+# ================================
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD  17)
 set(CUDA_STANDARD_REQUIRED  ON)
@@ -9,11 +19,14 @@ set(API_GL 0)
 set(API_CU 1)
 set(API ${API_CU})
 
+message(STATUS "[DEBUG] API Configuration: API_GL=${API_GL}, API_CU=${API_CU}, USE_API=${API}")
+
 add_definitions(-DAPI_GL=${API_GL})
 add_definitions(-DAPI_CU=${API_CU})
 add_definitions(-DAPI=${API})
 
 set(USE_OPTIX 1)
+message(STATUS "[DEBUG] USE_OPTIX=${USE_OPTIX}")
 add_definitions(-DUSE_OPTIX=${USE_OPTIX})
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
@@ -56,10 +69,8 @@ add_subdirectory(submodules/glfw)
 include_directories(submodules/glfw/include)
 
 # # Glad
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/submodules/glad/cmake" glad_cmake)
-glad_add_library(glad_gl_core_33 STATIC API gl:core=3.3)
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/gladsources/glad_gl_core_33/include")
-set(GLAD_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/gladsources/glad_gl_core_33/src/gl.c)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/submodules/glad/include")
+set(GLAD_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/submodules/glad/src/glad.c)
 
 # ASSIMP
 set(ASSIMP_INSTALL_PDB OFF)
@@ -69,47 +80,63 @@ include_directories(submodules/assimp/include)
 
 # # OIDN
 SET(OIDN_DEVICE_CPU OFF)
-SET(OIDN_DEVICE_CUDA ON)
-add_subdirectory(submodules/oidn)
+SET(OIDN_DEVICE_CUDA OFF)
+# add_subdirectory(submodules/oidn)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CUDA_ARCHITECTURES "52;60;70;75")
 
 # OptiX
+message(STATUS "[DEBUG] Searching for OptiX...")
 if(NOT DEFINED ENV{OptiX_DIR})
     message(FATAL_ERROR "NO OPTIX_DIR SET")
 endif()
+message(STATUS "[DEBUG] OptiX_DIR: $ENV{OptiX_DIR}")
 
 if(NOT EXISTS "$ENV{OptiX_DIR}/include/optix.h")
     message(FATAL_ERROR "NO optix.h FOUND IN $ENV{OptiX_DIR}/include")
 endif()
 
 set(OptiX_ROOT_DIR $ENV{OptiX_DIR})
+message(STATUS "[DEBUG] OptiX Header found successfully")
 
 # Optix
 set(OPTIX_DIR $ENV{OptiX_DIR}/include)
+message(STATUS "[DEBUG] OPTIX_DIR: ${OPTIX_DIR}")
 
 include(cmake/FindOptix.cmake)
 include_directories(${OptiX_INCLUDE_DIR})
+message(STATUS "[DEBUG] OptiX Include Dir: ${OptiX_INCLUDE_DIR}")
 
+message(STATUS "[DEBUG] Searching for CUDA...")
 find_package(CUDA REQUIRED)
 enable_language(CUDA)
+message(STATUS "[DEBUG] CUDA_VERSION: ${CUDA_VERSION}")
+message(STATUS "[DEBUG] CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
+message(STATUS "[DEBUG] CUDA_LIBRARIES: ${CUDA_LIBRARIES}")
+message(STATUS "[DEBUG] CUDA_NVCC_EXECUTABLE: ${CUDA_NVCC_EXECUTABLE}")
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -lineinfo --generate-line-info)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20012) # Suppress warning about host/device label on default constructor
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -diag-suppress 20013) # Suppress constexpr functoin
+message(STATUS "[DEBUG] CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+message(STATUS "[DEBUG] CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
 
 if(MSVC)
+    message(STATUS "[DEBUG] MSVC Compiler detected")
     # utf8
     # ddisbale 4819
     add_compile_options("/utf-8")
     add_compile_options("/wd4819")
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler "/wd4819,/utf-8")
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    message(STATUS "[DEBUG] Compiler: ${CMAKE_CXX_COMPILER_ID}")
+    message(STATUS "[DEBUG] Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
 
 
 set(CUDA_LIB_DIR "$ENV{CUDA_PATH}/lib/x64")
+message(STATUS "[DEBUG] CUDA_LIB_DIR: ${CUDA_LIB_DIR}")
 link_directories(${CUDA_LIB_DIR})
 
 set (sourceFiles
@@ -159,21 +186,34 @@ endforeach()
 endif()
 
 
+find_package(OpenGL REQUIRED)
+message(STATUS "[DEBUG] OpenGL found: ${OPENGL_FOUND}")
+message(STATUS "[DEBUG] OpenGL Library: ${OPENGL_LIBRARIES}")
 
+message(STATUS "[DEBUG] Source files: ${sourceFiles}")
+message(STATUS "[DEBUG] Building PathTracer executable...")
 cuda_add_executable(PathTracer ${sourceFiles})
 
 
 add_custom_target(GeneratePTXFiles ALL DEPENDS ${PTX_FILES})
 add_dependencies(PathTracer GeneratePTXFiles)
 
-target_link_libraries(PathTracer glfw opengl32 OpenImageDenoise assimp)
+message(STATUS "[DEBUG] Linking libraries: glfw, OpenGL, assimp, CUDA, OptiX")
+target_link_libraries(PathTracer glfw OpenGL::GL assimp)
 target_link_libraries(PathTracer ${CUDA_LIBRARIES} ${OptiX_LIBRARIES})
+message(STATUS "[DEBUG] Libraries linked successfully")
 
 set_property(TARGET PathTracer PROPERTY CXX_STANDARD 17)
 set_property(TARGET PathTracer PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET PathTracer PROPERTY CUDA_STANDARD 17)
 target_compile_definitions(PathTracer PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
+message(STATUS "========== Project Configuration Complete ==========")
+message(STATUS "[DEBUG] Target: PathTracer")
+message(STATUS "[DEBUG] Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "[DEBUG] Build Directory: ${CMAKE_BINARY_DIR}")
+message(STATUS "[DEBUG] Install Prefix: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "========== Ready to Build ==========")
 
 install(TARGETS PathTracer RUNTIME)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/ DESTINATION bin/resources)
