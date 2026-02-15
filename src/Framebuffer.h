@@ -30,6 +30,9 @@ public:
 
     ~framebuffer();
 
+    int32_t m_Width = -1;
+    int32_t m_Height = -1;
+    std::vector<framebufferDescriptor> m_Descriptors;
 
     std::vector<std::shared_ptr<cudaTextureMapping>> CudaMappings;
 private:

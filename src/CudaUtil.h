@@ -26,11 +26,60 @@ struct cudaTextureMapping
     cudaArray* CudaTextureArray;
     cudaGraphicsResource* CudaTextureResource;
     cudaTextureObject_t TexObj;
+    bool bMapped = false;
+    bool bWriteOnly = false;
+    bool bInitialized = false;
+
+    void Init(GLuint TexID, int Width, int Height, uint32_t ElemSize, bool InbWriteOnly =false)
+    {
+        // 这里 ElemSize 不是“漏用”，而是目前不需要。因为 cudaGraphicsGLRegisterImage + cudaGraphicsSubResourceGetMappedArray 的 array 格式由 GL 纹理的内部格式决定，CUDA 侧不需要用 ElemSize 来描述格式。
+        bWriteOnly = InbWriteOnly;
+        cudaGraphicsGLRegisterImage(&CudaTextureResource, TexID, GL_TEXTURE_2D, bWriteOnly ? cudaGraphicsRegisterFlagsWriteDiscard :cudaGraphicsRegisterFlagsNone);
+        CUDA_CHECK_ERROR(cudaGetLastError());
+        bInitialized = true;
+    }
+
+    void Map()
+    {
+        assert(bInitialized);
+        if(!bMapped)
+        {
+            cudaGraphicsMapResources(1, &CudaTextureResource);
+            cudaGraphicsSubResourceGetMappedArray(&CudaTextureArray, CudaTextureResource, 0, 0);
+
+            cudaResourceDesc texRes;
+            memset(&texRes, 0, sizeof(cudaResourceDesc));
+            texRes.resType = cudaResourceTypeArray;
+            texRes.res.array.array = CudaTextureArray;
+            
+            cudaTextureDesc texDesc;
+            memset(&texDesc, 0, sizeof(cudaTextureDesc));
+            texDesc.readMode = cudaReadModeElementType;
+            
+
+            cudaCreateTextureObject(&TexObj, &texRes, &texDesc, nullptr);    
+            bMapped = true;
+        }
+    }
+
+    void Unmap()
+    {
+        assert(bInitialized);
+        if(bMapped)
+        {
+            cudaGraphicsUnmapResources(1, &CudaTextureResource);
+            CudaTextureArray = nullptr;
+            cudaDestroyTextureObject(TexObj);
+            bMapped = false;
+        }
+    }
 
     void Destroy()
     {
-        cudaDestroyTextureObject(TexObj);
-        cudaGraphicsUnmapResources(1, &CudaTextureResource);
+        Unmap();
+        assert(bMapped == false);
+        assert(bInitialized == true);
+        cudaGraphicsUnregisterResource(CudaTextureResource);
     }
     ~cudaTextureMapping()
     {
@@ -38,63 +87,35 @@ struct cudaTextureMapping
     }
 };
 
-std::shared_ptr<cudaTextureMapping> CreateMapping(std::shared_ptr<textureGL> Tex, bool Write=false)
+std::shared_ptr<cudaTextureMapping> CreateMapping(std::shared_ptr<textureGL> Tex, bool Write=false, bool CreateWithMapping = true)
 {
     std::shared_ptr<cudaTextureMapping> Result = std::make_shared<cudaTextureMapping>();
+    Result->Init(Tex->TextureID, Tex->Width, Tex->Height, 4 * sizeof(uint8_t), Write);
+    CUDA_CHECK_ERROR(cudaGetLastError());
 
-    cudaGraphicsGLRegisterImage(&Result->CudaTextureResource, Tex->TextureID, GL_TEXTURE_2D, Write ? cudaGraphicsRegisterFlagsWriteDiscard :cudaGraphicsRegisterFlagsNone);
-
-    // Map the CUDA buffer to access it in CUDA
-    cudaGraphicsMapResources(1, &Result->CudaTextureResource);
-    cudaGraphicsSubResourceGetMappedArray(&Result->CudaTextureArray, Result->CudaTextureResource, 0, 0);
-
-    cudaResourceDesc texRes;
-    memset(&texRes, 0, sizeof(cudaResourceDesc));
-    texRes.resType = cudaResourceTypeArray;
-    texRes.res.array.array = Result->CudaTextureArray;
-    
-
-
-    cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(cudaTextureDesc));
-    texDesc.readMode = cudaReadModeElementType;
-    
-
-    cudaCreateTextureObject(&Result->TexObj, &texRes, &texDesc, nullptr);    
+    if(CreateWithMapping)
+    {
+        Result->Map();
+        CUDA_CHECK_ERROR(cudaGetLastError());
+    }
 
     return Result;
 }   
 
-std::shared_ptr<cudaTextureMapping> CreateMapping(GLuint TexID, int Width, int Height, uint32_t ElemSize, bool Write=false)
+std::shared_ptr<cudaTextureMapping> CreateMapping(GLuint TexID, int Width, int Height, uint32_t ElemSize, bool bWriteOnly =false, bool CreateWithMapping = true)
 {
     CUDA_CHECK_ERROR(cudaGetLastError());
 
     std::shared_ptr<cudaTextureMapping> Result = std::make_shared<cudaTextureMapping>();
 
 
-    cudaGraphicsGLRegisterImage(&Result->CudaTextureResource, TexID, GL_TEXTURE_2D, Write ? cudaGraphicsRegisterFlagsWriteDiscard :cudaGraphicsRegisterFlagsNone);
+    Result->Init(TexID, Width, Height, ElemSize, bWriteOnly);
     CUDA_CHECK_ERROR(cudaGetLastError());
-
-    // Map the CUDA buffer to access it in CUDA
-    cudaGraphicsMapResources(1, &Result->CudaTextureResource);
-    CUDA_CHECK_ERROR(cudaGetLastError());
-    cudaGraphicsSubResourceGetMappedArray(&Result->CudaTextureArray, Result->CudaTextureResource, 0, 0);
-    CUDA_CHECK_ERROR(cudaGetLastError());
-
-    cudaResourceDesc texRes;
-    memset(&texRes, 0, sizeof(cudaResourceDesc));
-    texRes.resType = cudaResourceTypeArray;
-    texRes.res.array.array = Result->CudaTextureArray;
-
-
-    cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(cudaTextureDesc));
-    texDesc.readMode = cudaReadModeElementType;
-    
-
-    cudaCreateTextureObject(&Result->TexObj, &texRes, &texDesc, nullptr);
-
-    CUDA_CHECK_ERROR(cudaGetLastError());
+    if(CreateWithMapping)
+    {
+        Result->Map();
+        CUDA_CHECK_ERROR(cudaGetLastError());
+    }
     return Result;
 }   
 }

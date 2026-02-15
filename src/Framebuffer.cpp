@@ -6,6 +6,10 @@ namespace gpupt
 
 framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescriptor> &Descriptors)
 {
+    m_Width = Width;
+    m_Height = Height;
+    m_Descriptors = Descriptors;
+
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
@@ -42,14 +46,14 @@ framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescripto
     CudaMappings.resize(Descriptors.size());
     for(int i=0; i<CudaMappings.size(); i++) 
     {
-        CudaMappings[i] = CreateMapping(Textures[i], Width, Height, Descriptors[i].ElemSize, true);
+        CudaMappings[i] = CreateMapping(Textures[i], Width, Height, Descriptors[i].ElemSize, false, false);
     }
-
 
 }
 
 void framebuffer::Destroy()
 {
+    CudaMappings = {}; // clear all cuda mapping
     glDeleteTextures(1, &DepthTexture);
     for(int i=0; i<Textures.size(); i++)
     {
@@ -66,11 +70,23 @@ framebuffer::~framebuffer()
 
 void framebuffer::Bind()
 {
+    for(int i = 0; i < CudaMappings.size(); i++) {
+        if (CudaMappings[i]) {
+            CudaMappings[i]->Unmap();
+        }
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 }
 void framebuffer::Unbind()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER,0);
+    // 重新映射所有资源，以便CUDA可以访问它们
+    for(int i = 0; i < CudaMappings.size(); i++) {
+        if (CudaMappings[i]) {
+            CudaMappings[i]->Map();
+        }
+    }
+
+   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
 
 

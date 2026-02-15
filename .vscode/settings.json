@@ -100,12 +100,9 @@
         "*.isph": "cpp"
     },
     // ========== Clangd Configuration for CUDA/OptiX ==========
-    "[cuda]": {
-        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    },
-    "[cpp]": {
-        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    },
     "clangd.checkUpdates": false,
-    "C_Cpp.intelliSenseEngine": "disabled"
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.autocomplete": "default",
+    "C_Cpp.errorSquiggles": "enabled",
+    "clangd.enable": false
 }

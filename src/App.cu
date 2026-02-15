@@ -416,9 +416,15 @@ void application::Trace()
 #if !USE_OPTIX
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
+    cudaFramebuffer fb{
+        Framebuffer[PingPongInx]->CudaMappings[0]->TexObj,
+        Framebuffer[PingPongInx]->CudaMappings[1]->TexObj,
+        Framebuffer[PingPongInx]->CudaMappings[2]->TexObj,
+        Framebuffer[PingPongInx]->CudaMappings[3]->TexObj
+    };
     pathtracing::TraceKernel<<<gridSize, blockSize>>>(
         (commonCu::half4*)RenderBuffer[PingPongInx]->Data, 
-        {Framebuffer[PingPongInx]->CudaMappings[0]->TexObj, Framebuffer[PingPongInx]->CudaMappings[1]->TexObj, Framebuffer[PingPongInx]->CudaMappings[2]->TexObj, Framebuffer[PingPongInx]->CudaMappings[3]->TexObj},
+        fb,
         RenderWidth, RenderHeight,
         (triangle*)Scene->BVH->TrianglesBuffer->Data, (bvhNode*) Scene->BVH->BVHBuffer->Data, (uint32_t*) Scene->BVH->IndicesBuffer->Data, (indexData*) Scene->BVH->IndexDataBuffer->Data, (instance*)Scene->BVH->TLASInstancesBuffer->Data, (tlasNode*) Scene->BVH->TLASNodeBuffer->Data,
         (camera*)Scene->CamerasBuffer->Data, (tracingParameters*)TracingParamsBuffer->Data, (material*)Scene->MaterialBuffer->Data, Scene->TexArray->TexObject, Scene->TextureWidth, Scene->TextureHeight, (light*)Scene->Lights->LightsBuffer->Data, (float*)Scene->Lights->LightsCDFBuffer->Data, (int)Scene->Lights->Lights.size(), 
@@ -546,6 +552,9 @@ void application::Render()
     {
         CUDA_CHECK_ERROR(cudaGetLastError());
         Rasterize(); // Outputs to CurrentFramebuffer
+
+        RenderTextureMapping->Map(); // Maps RenderTextureMapping->CudaTextureArray to be used in CUDA, which is used as output in Trace and intermediate buffer in filters
+
         CUDA_CHECK_ERROR(cudaGetLastError());
         Trace();     // Read CurrentFrmaebuffer, Writes to RenderBuffer[PingPongInx]
         CUDA_CHECK_ERROR(cudaGetLastError());
@@ -560,7 +569,7 @@ void application::Render()
 
         cudaMemcpyToArray(RenderTextureMapping->CudaTextureArray, 0, 0, FilterBuffer[1]->Data, RenderWidth * RenderHeight * sizeof(filter::half4), cudaMemcpyDeviceToDevice);
         CUDA_CHECK_ERROR(cudaGetLastError());
-        
+        RenderTextureMapping->Unmap();
         OutputTexture = RenderTexture->TextureID;
         DebugTint = glm::vec4(1);
     }
@@ -763,7 +772,7 @@ void application::ResizeRenderTextures()
     RenderBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
     RenderBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
 
-    RenderTextureMapping = CreateMapping(RenderTexture);
+    RenderTextureMapping = CreateMapping(RenderTexture, /*bWriteOnly */ true, /*bCreateWithMapping*/ true);
     MomentsBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
     MomentsBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
     
