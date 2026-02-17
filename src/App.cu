@@ -369,8 +369,10 @@ void application::EndFrame()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     Window->Present();
 
-    Scene->Cameras[Params.CurrentCamera].PreviousFrame = Scene->Cameras[Params.CurrentCamera].Frame;
-
+    if(Scene->Cameras.size()>0)
+    {
+        Scene->Cameras[Params.CurrentCamera].PreviousFrame = Scene->Cameras[Params.CurrentCamera].Frame;
+    }
     PingPongInx = 1 - PingPongInx;
 }
 
@@ -575,11 +577,13 @@ void application::Render()
     }
     else if(SVGFDebugOutput == SVGFDebugOutputEnum::RawOutput)
     {
+        RenderTextureMapping->Map(); 
         Rasterize();
         CUDA_CHECK_ERROR(cudaGetLastError());
         Trace();
         CUDA_CHECK_ERROR(cudaGetLastError());
         cudaMemcpyToArray(RenderTextureMapping->CudaTextureArray, 0, 0, RenderBuffer[PingPongInx]->Data, RenderWidth * RenderHeight * sizeof(filter::half4), cudaMemcpyDeviceToDevice);
+        RenderTextureMapping->Unmap();
         OutputTexture = RenderTexture->TextureID;
         DebugTint = glm::vec4(1);
         CUDA_CHECK_ERROR(cudaGetLastError());
@@ -610,20 +614,24 @@ void application::Render()
     }
     else if(SVGFDebugOutput == SVGFDebugOutputEnum::TemporalFilter)
     {
+        RenderTextureMapping->Map(); 
         Rasterize();
         Trace();
         TemporalFilter();
         cudaMemcpyToArray(RenderTextureMapping->CudaTextureArray, 0, 0, RenderBuffer[PingPongInx]->Data, RenderWidth * RenderHeight * sizeof(filter::half4), cudaMemcpyDeviceToDevice);
+        RenderTextureMapping->Unmap();
         OutputTexture = RenderTexture->TextureID;
         DebugTint = glm::vec4(1,1,1,1);
     }
     else if(SVGFDebugOutput == SVGFDebugOutputEnum::ATrousWaveletFilter)
     {
+        RenderTextureMapping->Map(); 
         Rasterize();
         Trace();
         TemporalFilter();
         WaveletFilter();
         cudaMemcpyToArray(RenderTextureMapping->CudaTextureArray, 0, 0, FilterBuffer[0]->Data, RenderWidth * RenderHeight * sizeof(filter::half4), cudaMemcpyDeviceToDevice);
+        RenderTextureMapping->Unmap();
         OutputTexture = RenderTexture->TextureID;        
         DebugTint = glm::vec4(1,1,1,1);
     }

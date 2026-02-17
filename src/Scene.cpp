@@ -376,56 +376,234 @@ scene::scene()
 {
     glm::uvec2 RenderSize = application::GetSize();
 
-
     this->Cameras.emplace_back();
     camera &Camera = this->Cameras.back();
     Camera.FOV = 60.0f;
     Camera.Aspect = (float)RenderSize.x / (float)RenderSize.y;
     Camera.Controlled = 1;  
     this->CameraNames.push_back("Main Camera");
+
+    auto CreateDummyScene = [&]()
+    {
+        
+        // Blas在load的时候就好了，在shape的PreProcess里
+
+        LoadAssimp("resources/models/BaseShapes/Cube/Cube.obj", this, /*load tree?*/false, /*load material*/false, false, 1.0f);
+        // LoadAssimp("resources/models/BaseShapes/Cone/Cone.obj", this, false, false, false, 1.0f);
+        // LoadAssimp("resources/models/BaseShapes/Cylinder/Cylinder.obj", this, false, false, false, 1.0f);
+        LoadAssimp("resources/models/BaseShapes/Sphere/Sphere.obj", this, false, false, false, 1.0f);
+        // LoadAssimp("resources/models/BaseShapes/Torus/Torus.obj", this, false, false, false, 1.0f);
+        LoadAssimp("resources/models/BaseShapes/Plane/Plane.obj", this, false, false, false, 1.0f);
+        // LoadAssimp("resources/models/BaseShapes/Plane/Plane.obj", this, false, false, false, 1.0f);
+
+        this->Materials.emplace_back();
+        material &BaseMaterial = this->Materials.back(); 
+        BaseMaterial.Colour = {0.725f, 0.71f, 0.68f};
+        this->MaterialNames.push_back("Base");
+
+        
+        {
+            this->Instances.emplace_back();
+            instance &CubeInstance = this->Instances.back();
+            CubeInstance.Shape = (int)0;
+            CubeInstance.Material = (int)this->Materials.size()-1;
+            CubeInstance.Transform = glm::mat4(1);
+            this->InstanceNames.push_back("Cube");
+        }
+
+        {
+            this->Instances.emplace_back();
+            instance &SphereInstance = this->Instances.back();
+            SphereInstance.Shape = (int)1;
+            SphereInstance.Material = (int)this->Materials.size()-1;
+            SphereInstance.Transform = glm::translate(glm::mat4(1), glm::vec3(4, 0, 0));
+            this->InstanceNames.push_back("Sphere");
+        }
+        
+        {
+            this->Instances.emplace_back();
+            instance &FloorInstance = this->Instances.back();
+            FloorInstance.Shape = (int)this->Shapes.size()-1;
+            FloorInstance.Material = (int)this->Materials.size()-1;
+            FloorInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 4.0f));
+            this->InstanceNames.push_back("Floor");
+        }
+        
+        this->Materials.emplace_back();
+        material &LightMaterial = this->Materials.back();
+        LightMaterial.Emission = {40, 40, 40};    
+        this->Instances.emplace_back();
+        instance &LightInstance = this->Instances.back(); 
+        LightInstance.Shape = (int)this->Shapes.size()-1;
+        LightInstance.Material = (int)this->Materials.size()-1;
+        LightInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0));
+        this->InstanceNames.push_back("Light");
+        this->MaterialNames.push_back("Light");
+    };
+
+    CreateCornellBox();
+}
+
+void scene::CreateCornellBox()
+{
+    // Cornell Box是标准的光学测试场景
+    // 清空当前场景，只保留相机
+    ClearInstances();
+    this->Shapes.clear();
+    this->ShapeNames.clear();
+    this->Materials.clear();
+    this->MaterialNames.clear();
+
+    // 加载基本几何体
+    int CubeShapeIdx = this->Shapes.size();
+    LoadAssimp("resources/models/BaseShapes/Cube/Cube.obj", this, false, false, false, 1.0f);
     
-    // LoadAssimp("resources/models/BaseShapes/Cube/Cube.obj", this, false, false, false, 1.0f);
-    // LoadAssimp("resources/models/BaseShapes/Cone/Cone.obj", this, false, false, false, 1.0f);
-    // LoadAssimp("resources/models/BaseShapes/Cylinder/Cylinder.obj", this, false, false, false, 1.0f);
-    // LoadAssimp("resources/models/BaseShapes/Sphere/Sphere.obj", this, false, false, false, 1.0f);
-    // LoadAssimp("resources/models/BaseShapes/Torus/Torus.obj", this, false, false, false, 1.0f);
+    int SphereShapeIdx = this->Shapes.size();
+    LoadAssimp("resources/models/BaseShapes/Sphere/Sphere.obj", this, false, false, false, 1.0f);
+    
+    int PlaneShapeIdx = this->Shapes.size();
     LoadAssimp("resources/models/BaseShapes/Plane/Plane.obj", this, false, false, false, 1.0f);
 
-    this->Materials.emplace_back();
-    material &BaseMaterial = this->Materials.back(); 
-    BaseMaterial.Colour = {0.725f, 0.71f, 0.68f};
-    this->MaterialNames.push_back("Base");
+    const float RoomSize = 2.0f;
+    const float RoomHeight = 2.0f;
 
-    
-    // {
-    //     this->Instances.emplace_back();
-    //     instance &CubeInstance = this->Instances.back();
-    //     CubeInstance.Shape = (int)0;
-    //     CubeInstance.Material = (int)this->Materials.size()-1;
-    //     CubeInstance.Transform = glm::mat4(1);
-    //     this->InstanceNames.push_back("Cube");
-    // }
-    
+    // 创建材质
+    // 白色材质（用于墙壁和天花板）
+    this->Materials.emplace_back();
+    material &WhiteMaterial = this->Materials.back();
+    WhiteMaterial.Colour = {0.75f, 0.75f, 0.75f};
+    WhiteMaterial.Roughness = 0.5f;
+    this->MaterialNames.push_back("White");
+    int WhiteMaterialIdx = this->Materials.size() - 1;
+
+    // 红色材质（左墙）
+    this->Materials.emplace_back();
+    material &RedMaterial = this->Materials.back();
+    RedMaterial.Colour = {0.75f, 0.25f, 0.25f};
+    RedMaterial.Roughness = 0.5f;
+    this->MaterialNames.push_back("Red");
+    int RedMaterialIdx = this->Materials.size() - 1;
+
+    // 绿色材质（右墙）
+    this->Materials.emplace_back();
+    material &GreenMaterial = this->Materials.back();
+    GreenMaterial.Colour = {0.25f, 0.75f, 0.25f};
+    GreenMaterial.Roughness = 0.5f;
+    this->MaterialNames.push_back("Green");
+    int GreenMaterialIdx = this->Materials.size() - 1;
+
+    // 光源材质
+    this->Materials.emplace_back();
+    material &LightMaterial = this->Materials.back();
+    LightMaterial.Emission = {3.0f, 3.0f, 3.0f};
+    this->MaterialNames.push_back("Light");
+    int LightMaterialIdx = this->Materials.size() - 1;
+
+    // 金属材质（用于立方体）
+    this->Materials.emplace_back();
+    material &MetalMaterial = this->Materials.back();
+    MetalMaterial.Colour = {0.8f, 0.8f, 0.8f};
+    MetalMaterial.Metallic = 0.9f;
+    MetalMaterial.Roughness = 0.1f;
+    this->MaterialNames.push_back("Metal");
+    int MetalMaterialIdx = this->Materials.size() - 1;
+
+    // 创建房间的几何结构
+
+    // 地板
     {
         this->Instances.emplace_back();
         instance &FloorInstance = this->Instances.back();
-        FloorInstance.Shape = (int)this->Shapes.size()-1;
-        FloorInstance.Material = (int)this->Materials.size()-1;
-        FloorInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 4.0f));
+        FloorInstance.Shape = PlaneShapeIdx;
+        FloorInstance.Material = WhiteMaterialIdx;
+        FloorInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -RoomSize, 0.0f)) 
+                                 * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize, 1.0f, RoomSize));
         this->InstanceNames.push_back("Floor");
     }
-    
-    this->Materials.emplace_back();
-    material &LightMaterial = this->Materials.back();
-    LightMaterial.Emission = {40, 40, 40};    
-    this->Instances.emplace_back();
-    instance &LightInstance = this->Instances.back(); 
-    LightInstance.Shape = (int)this->Shapes.size()-1;
-    LightInstance.Material = (int)this->Materials.size()-1;
-    LightInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0));
-    this->InstanceNames.push_back("Light");
-    this->MaterialNames.push_back("Light");
-    
+
+    // 天花板
+    {
+        this->Instances.emplace_back();
+        instance &CeilingInstance = this->Instances.back();
+        CeilingInstance.Shape = PlaneShapeIdx;
+        CeilingInstance.Material = WhiteMaterialIdx;
+        CeilingInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, RoomHeight, 0.0f))
+                                   * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+                                   * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize, 1.0f, RoomSize));
+        this->InstanceNames.push_back("Ceiling");
+    }
+
+    // 后墙
+    {
+        this->Instances.emplace_back();
+        instance &BackWallInstance = this->Instances.back();
+        BackWallInstance.Shape = PlaneShapeIdx;
+        BackWallInstance.Material = WhiteMaterialIdx;
+        BackWallInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -RoomSize))
+                                    * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+                                    * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize, 1.0f, RoomHeight));
+        this->InstanceNames.push_back("BackWall");
+    }
+
+    // 左墙（红色）
+    {
+        this->Instances.emplace_back();
+        instance &LeftWallInstance = this->Instances.back();
+        LeftWallInstance.Shape = PlaneShapeIdx;
+        LeftWallInstance.Material = RedMaterialIdx;
+        LeftWallInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(-RoomSize, 0.0f, 0.0f))
+                                    * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))
+                                    * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+                                    * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize, 1.0f, RoomHeight));
+        this->InstanceNames.push_back("LeftWall");
+    }
+
+    // 右墙（绿色）
+    {
+        this->Instances.emplace_back();
+        instance &RightWallInstance = this->Instances.back();
+        RightWallInstance.Shape = PlaneShapeIdx;
+        RightWallInstance.Material = GreenMaterialIdx;
+        RightWallInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(RoomSize, 0.0f, 0.0f))
+                                     * glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f))
+                                     * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+                                     * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize, 1.0f, RoomHeight));
+        this->InstanceNames.push_back("RightWall");
+    }
+
+    // 光源（顶部发光面板）
+    {
+        this->Instances.emplace_back();
+        instance &LightInstance = this->Instances.back();
+        LightInstance.Shape = PlaneShapeIdx;
+        LightInstance.Material = LightMaterialIdx;
+        LightInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, RoomHeight - 0.1f, 0.0f))
+                                 * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+                                 * glm::scale(glm::mat4(1.0f), glm::vec3(RoomSize * 0.5f, 1.0f, RoomSize * 0.5f));
+        this->InstanceNames.push_back("Light");
+    }
+
+    // 左边的立方体
+    {
+        this->Instances.emplace_back();
+        instance &CubeInstance = this->Instances.back();
+        CubeInstance.Shape = CubeShapeIdx;
+        CubeInstance.Material = MetalMaterialIdx;
+        CubeInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -1.2f, -0.5f))
+                                * glm::scale(glm::mat4(1.0f), glm::vec3(0.6f, 0.8f, 0.6f));
+        this->InstanceNames.push_back("Cube");
+    }
+
+    // 右边的球体
+    {
+        this->Instances.emplace_back();
+        instance &SphereInstance = this->Instances.back();
+        SphereInstance.Shape = SphereShapeIdx;
+        SphereInstance.Material = WhiteMaterialIdx;
+        SphereInstance.Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.8f, -1.4f, -0.3f))
+                                  * glm::scale(glm::mat4(1.0f), glm::vec3(0.6f, 0.6f, 0.6f));
+        this->InstanceNames.push_back("Sphere");
+    }
 }
 
 void scene::CheckNames()
@@ -674,7 +852,10 @@ void scene::ClearInstances()
 {
     Instances.clear();
     InstanceNames.clear();
-    Lights->Build(this);
+    if(Lights)
+    {
+        Lights->Build(this);
+    }
 }
 
 glm::vec4 texture::Sample(glm::ivec2 Coords)

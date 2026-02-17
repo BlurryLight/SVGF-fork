@@ -1146,6 +1146,9 @@ void gui::GUI()
 
     
     // ImVec4 TintCol(App->DebugTint.x, App->DebugTint.y, App->DebugTint.z, App->DebugTint.w);
+
+    // 最后上屏不是通过present，而是通过ImGui的Image显示,似乎只支持特定格式，对RGBA16_UINT都不支持，会黑屏
+
     ImGui::Image((ImTextureID)App->OutputTexture, ImVec2(RenderWindowWidth, RenderWindowHeight),ImVec2(0, 1), ImVec2(1, 0));
     // ImGui::Image((ImTextureID)App->Framebuffer[0]->GetTexture(1), ImVec2(RenderWindowWidth, RenderWindowHeight), ImVec2(0, 1), ImVec2(1, 0));
     if(SelectedInstanceIndices.size()==1)

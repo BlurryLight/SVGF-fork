@@ -506,6 +506,7 @@ void sceneBVH::UpdateMaterial(uint32_t InstanceInx, uint32_t MaterialInx)
     this->TLASInstancesBuffer->updateData(this->TLAS.BLAS->data(), this->TLAS.BLAS->size() * sizeof(instance));
 }
 
+// Transform Changed的时候会立刻更新TLAS
 void sceneBVH::UpdateTLAS(uint32_t InstanceInx)
 {
     Scene->CalculateInstanceTransform(InstanceInx);

@@ -215,6 +215,7 @@ struct scene
     void ClearInstances();
 
     void CalculateInstanceTransform(int InstanceInx);
+    void CreateCornellBox();
     std::shared_ptr<textureArrayCu> TexArray;
     std::shared_ptr<textureArrayCu> EnvTexArray;
     std::shared_ptr<buffer> CamerasBuffer;
