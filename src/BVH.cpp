@@ -269,20 +269,52 @@ tlas::tlas(std::vector<instance>* BVHList)
 
 int tlas::FindBestMatch(std::vector<int>& List, int N, int A)
 {
+    auto CalcNodeArea = [&](int Index)
+    {
+        glm::vec3 Diff = Nodes[List[Index]].AABBMax - Nodes[List[Index]].AABBMin;
+        return Diff.x * Diff.y + Diff.y * Diff.z + Diff.x * Diff.z;
+    };
+
+    enum {EMinimalArea, EWeightedSAH};
+
+    int Method = EWeightedSAH;
+
     float Smallest = 1e30f;
     int BestB = -1;
     for(int B=0; B< N; B++)
     {
         if(B != A)
         {
-            glm::vec3 BMax = (glm::max)(Nodes[List[A]].AABBMax, Nodes[List[B]].AABBMax);
-            glm::vec3 BMin = (glm::min)(Nodes[List[A]].AABBMin, Nodes[List[B]].AABBMin);
-            glm::vec3 Diff = BMax - BMin;
-            float Area = Diff.x * Diff.y + Diff.y * Diff.z + Diff.x * Diff.z;
-            if(Area < Smallest) 
+            // 方法1：SAH的一个变体，确保每次合并的节点面积最小
+            if (Method == EMinimalArea)
             {
-                Smallest = Area;
-                BestB = B;
+                glm::vec3 BMax = (glm::max)(Nodes[List[A]].AABBMax, Nodes[List[B]].AABBMax);
+                glm::vec3 BMin = (glm::min)(Nodes[List[A]].AABBMin, Nodes[List[B]].AABBMin);
+                glm::vec3 Diff = BMax - BMin;
+                float Area = Diff.x * Diff.y + Diff.y * Diff.z + Diff.x * Diff.z;
+                if(Area < Smallest)
+                {
+                    Smallest = Area;
+                    BestB = B;
+                }
+            }
+            // 方法2: 确保合并以后的增量面积更小
+            else if (Method == EWeightedSAH)
+            {
+                glm::vec3 BMax = (glm::max)(Nodes[List[A]].AABBMax, Nodes[List[B]].AABBMax);
+                glm::vec3 BMin = (glm::min)(Nodes[List[A]].AABBMin, Nodes[List[B]].AABBMin);
+                glm::vec3 Diff = BMax - BMin;
+                float Area = Diff.x * Diff.y + Diff.y * Diff.z + Diff.x * Diff.z;
+                float WeightedSAH = Area - (CalcNodeArea(A) + CalcNodeArea(B));
+                if(WeightedSAH < Smallest)
+                {
+                    Smallest = WeightedSAH;
+                    BestB = B;
+                }
+            }
+            else
+            {
+                throw std::runtime_error("Unknown TLAS build method");
             }
         }
     }
