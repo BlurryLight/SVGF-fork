@@ -502,9 +502,10 @@ void scene::CreateCornellBox()
     // 金属材质（用于立方体）
     this->Materials.emplace_back();
     material &MetalMaterial = this->Materials.back();
+    MetalMaterial.MaterialType = MATERIAL_TYPE_PBR;
     MetalMaterial.Colour = {0.8f, 0.8f, 0.8f};
     MetalMaterial.Metallic = 0.9f;
-    MetalMaterial.Roughness = 0.1f;
+    MetalMaterial.Roughness = 0.04f;
     this->MaterialNames.push_back("Metal");
     int MetalMaterialIdx = this->Materials.size() - 1;
 

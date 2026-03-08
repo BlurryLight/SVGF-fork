@@ -45,7 +45,7 @@ message(STATUS "[DEBUG] API Configuration: API_GL=${API_GL}, API_CU=${API_CU}, U
 # Use target_compile_definitions instead of add_definitions for project-specific definitions
 set(PROJECT_DEFINES "-DAPI_GL=${API_GL}" "-DAPI_CU=${API_CU}" "-DAPI=${API}")
 
-set(USE_OPTIX 1)
+set(USE_OPTIX 0)
 message(STATUS "[DEBUG] USE_OPTIX=${USE_OPTIX}")
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)

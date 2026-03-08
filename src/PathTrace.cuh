@@ -614,8 +614,8 @@ __global__ void TraceKernel(half4 *RenderImage, cudaFramebuffer _CurrentFramebuf
                 Radiance += PathTrace(0, UV, Normal) * InverseSampleCount;
             }
         }
-
-        half4 Output = commonCu::Vec4ToHalf4(vec4(Radiance, 1.0f));
+        vec4 Input = vec4(Radiance, 1.0f);
+        half4 Output = commonCu::Vec4ToHalf4(Input);
         RenderImage[GlobalID.y * Width + GlobalID.x] = Output;
     }
 }
