@@ -777,10 +777,13 @@ void application::ResizeRenderTextures()
     // TonemapTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8);
 
     RenderTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Half);
+    RenderTextureMapping = CreateMapping(RenderTexture, /*bWriteOnly */ true, /*bCreateWithMapping*/ true);
+
     RenderBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
+    // 必须真的half
+    static_assert(sizeof(filter::half4) == (sizeof(float) * 2), "filter::half4 must be 8 bytes");
     RenderBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
 
-    RenderTextureMapping = CreateMapping(RenderTexture, /*bWriteOnly */ true, /*bCreateWithMapping*/ true);
     MomentsBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
     MomentsBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
     

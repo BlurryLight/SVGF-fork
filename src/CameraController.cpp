@@ -11,16 +11,19 @@ namespace gpupt
 
 orbitCameraController::orbitCameraController()
 {
-    Position = glm::vec3(10,3,10);
+    // Position = glm::vec3(10,3,10);
+    Position = glm::vec3(0,0,8);
     Rotation = glm::vec3(0,0,0);
 
     this->Distance = std::sqrt(Position.x * Position.x + Position.y * Position.y + Position.z * Position.z);
+    //  这里的theta phi是按opengl 右手坐标系定义的，不是按球面坐标系定义的
+    // Y轴向上，theta是从Y轴到Position的夹角，phi是从X轴到Position在XZ平面上的投影的夹角
     this->Theta = std::acos(Position.y / this->Distance);
     this->Phi = std::atan2(Position.z, Position.x);
 
-    this->Phi = 0.0624008;
-    this->Theta = 1.30899;
-    this->Distance = 8; 
+    // this->Phi = 0.0624008;
+    // this->Theta = 1.30899;
+    // this->Distance = 8;
 
     Recalculate();
 }

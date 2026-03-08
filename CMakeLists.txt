@@ -45,7 +45,7 @@ message(STATUS "[DEBUG] API Configuration: API_GL=${API_GL}, API_CU=${API_CU}, U
 # Use target_compile_definitions instead of add_definitions for project-specific definitions
 set(PROJECT_DEFINES "-DAPI_GL=${API_GL}" "-DAPI_CU=${API_CU}" "-DAPI=${API}")
 
-set(USE_OPTIX 0)
+set(USE_OPTIX 1)
 message(STATUS "[DEBUG] USE_OPTIX=${USE_OPTIX}")
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
@@ -269,4 +269,15 @@ message(STATUS "[DEBUG] Install Prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "========== Ready to Build ==========")
 
 install(TARGETS PathTracer RUNTIME)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/ DESTINATION bin/resources)
+
+# Create symbolic link for resources directory
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/resources)
+    if (UNIX)
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink ${CMAKE_SOURCE_DIR}/recourses ${CMAKE_BINARY_DIR}/resources)
+    else()
+        # also there is symlink/hardlink on windows, it requires admin permission
+        file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/bin/resources" _dstDir)
+        file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/resources" _srcDir)
+        execute_process(COMMAND cmd.exe /c mklink /J "${_dstDir}" "${_srcDir}")
+    endif()
+endif()
