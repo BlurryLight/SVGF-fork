@@ -1140,46 +1140,114 @@ void gui::GUI()
     ImGui::SetNextWindowPos(ImVec2(GuiWidth,0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(App->RenderWindowWidth, App->RenderWindowHeight), ImGuiCond_Always);
     ImGui::Begin("__", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDecoration);
-    App->Controller.Locked = !ImGui::IsWindowFocused() || ImGuizmo::IsUsing();
     int RenderWindowWidth = ImGui::GetWindowSize().x;
     int RenderWindowHeight = ImGui::GetWindowSize().y;
 
-    
-    // ImVec4 TintCol(App->DebugTint.x, App->DebugTint.y, App->DebugTint.z, App->DebugTint.w);
-
-    // 最后上屏不是通过present，而是通过ImGui的Image显示,似乎只支持特定格式，对RGBA16_UINT都不支持，会黑屏
-
     ImGui::Image((ImTextureID)App->OutputTexture, ImVec2(RenderWindowWidth, RenderWindowHeight),ImVec2(0, 1), ImVec2(1, 0));
     // ImGui::Image((ImTextureID)App->Framebuffer[0]->GetTexture(1), ImVec2(RenderWindowWidth, RenderWindowHeight), ImVec2(0, 1), ImVec2(1, 0));
+
+    camera &CurrentCamera = App->Scene->Cameras[int(App->Params.CurrentCamera)];
+
+    if (ShowOrientationGizmo)
+    {
+        glm::mat4 CurrentViewMatrix = glm::inverse(CurrentCamera.Frame);
+        ImVec2 WindowPos = ImGui::GetWindowPos();
+        ImVec2 GizmoPos(WindowPos.x + RenderWindowWidth - OrientationGizmoSize - OrientationGizmoMargin,
+                        WindowPos.y + OrientationGizmoMargin);
+        ImVec2 GizmoSize(OrientationGizmoSize, OrientationGizmoSize);
+
+        ImDrawList *DrawList = ImGui::GetWindowDrawList();
+        ImGuizmo::SetDrawlist(DrawList);
+        ImGuizmo::ViewManipulate(glm::value_ptr(CurrentViewMatrix), 6.0f, GizmoPos, GizmoSize, IM_COL32(30, 30, 30, 180));
+
+        // Draw axis labels from the current view orientation so text follows gizmo rotation.
+        const glm::mat3 ViewRotation = glm::mat3(CurrentViewMatrix);
+        const glm::vec3 Axes[3] = {
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        };
+        const char *AxisLabels[3] = {"X", "Y", "Z"};
+        const ImU32 AxisColors[3] = {
+            IM_COL32(255, 96, 96, 255),
+            IM_COL32(96, 255, 96, 255),
+            IM_COL32(96, 160, 255, 255)
+        };
+
+        ImVec2 GizmoCenter(GizmoPos.x + GizmoSize.x * 0.5f, GizmoPos.y + GizmoSize.y * 0.5f);
+        const float ArrowStartRadius = GizmoSize.x * 0.10f;
+        const float ArrowEndRadius = GizmoSize.x * 0.30f;
+        const float ArrowHeadLength = GizmoSize.x * 0.07f;
+        const float ArrowHeadWidth = GizmoSize.x * 0.05f;
+        const float LabelRadius = GizmoSize.x * 0.40f;
+        for (int AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+        {
+            glm::vec3 AxisInView = ViewRotation * Axes[AxisIndex];
+            glm::vec2 Axis2D(AxisInView.x, -AxisInView.y);
+            float Axis2DLen = glm::length(Axis2D);
+            if (Axis2DLen < 1e-4f)
+                continue;
+
+            Axis2D /= Axis2DLen;
+
+            // Draw axis arrow (shaft + head triangle) to make orientation easier to read.
+            ImVec2 ArrowStart(GizmoCenter.x + Axis2D.x * ArrowStartRadius, GizmoCenter.y + Axis2D.y * ArrowStartRadius);
+            ImVec2 ArrowTip(GizmoCenter.x + Axis2D.x * ArrowEndRadius, GizmoCenter.y + Axis2D.y * ArrowEndRadius);
+            DrawList->AddLine(ArrowStart, ArrowTip, AxisColors[AxisIndex], 2.0f);
+
+            glm::vec2 Perp(-Axis2D.y, Axis2D.x);
+            ImVec2 HeadBase(ArrowTip.x - Axis2D.x * ArrowHeadLength, ArrowTip.y - Axis2D.y * ArrowHeadLength);
+            ImVec2 HeadLeft(HeadBase.x + Perp.x * ArrowHeadWidth, HeadBase.y + Perp.y * ArrowHeadWidth);
+            ImVec2 HeadRight(HeadBase.x - Perp.x * ArrowHeadWidth, HeadBase.y - Perp.y * ArrowHeadWidth);
+            DrawList->AddTriangleFilled(ArrowTip, HeadLeft, HeadRight, AxisColors[AxisIndex]);
+
+            ImVec2 LabelPos(GizmoCenter.x + Axis2D.x * LabelRadius, GizmoCenter.y + Axis2D.y * LabelRadius);
+            ImVec2 LabelSize = ImGui::CalcTextSize(AxisLabels[AxisIndex]);
+            LabelPos.x -= LabelSize.x * 0.5f;
+            LabelPos.y -= LabelSize.y * 0.5f;
+
+            DrawList->AddText(LabelPos, AxisColors[AxisIndex], AxisLabels[AxisIndex]);
+        }
+
+        // 在这里修改会和cameracontroller打架
+
+        // glm::mat4 UpdatedFrame = glm::inverse(CurrentViewMatrix);
+        // if (UpdatedFrame != CurrentCamera.Frame)
+        // {
+        //     CurrentCamera.Frame = UpdatedFrame;
+        //     App->ResetRender = true;
+        // }
+    }
+
     if(SelectedInstanceIndices.size()==1)
     {
         int SelectedInstance = *SelectedInstanceIndices.begin();
-        ImGuiIO &io = ImGui::GetIO();
 
         ImGuizmo::SetRect(GuiWidth, 0, App->RenderWindowWidth, App->RenderWindowHeight);
         instance &Instance = App->Scene->Instances[SelectedInstance];
-        camera &Camera = App->Scene->Cameras[int(App->Params.CurrentCamera)];
-        glm::mat4 ViewMatrix = glm::inverse(Camera.Frame);
-        
+        glm::mat4 ViewMatrix = glm::inverse(CurrentCamera.Frame);
         glm::mat4 ModelMatrix = App->Scene->Instances[SelectedInstance].Transform;
 
-        ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList()); 
-        
+        ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+
         glm::mat4 CorrectedTransform = glm::translate(ModelMatrix, App->Scene->Shapes[Instance.Shape].Centroid);
-        if(ImGuizmo::Manipulate(glm::value_ptr(ViewMatrix), glm::value_ptr(Camera.ProjectionMatrix), CurrentGizmoOperation, CurrentGizmoMode, glm::value_ptr(CorrectedTransform), NULL, NULL))
+        if(ImGuizmo::Manipulate(glm::value_ptr(ViewMatrix), glm::value_ptr(CurrentCamera.ProjectionMatrix), CurrentGizmoOperation, CurrentGizmoMode, glm::value_ptr(CorrectedTransform), NULL, NULL))
         {
             App->Scene->Instances[SelectedInstance].Transform = glm::translate(CorrectedTransform, -App->Scene->Shapes[Instance.Shape].Centroid);
             App->Scene->BVH->UpdateTLAS(SelectedInstance);
-            
+
             if(glm::length(App->Scene->Materials[App->Scene->Instances[SelectedInstance].Material].Emission) > 1e-3f)
             {
                 App->Scene->Lights->Build(App->Scene.get());
             }
-                        
+
             App->ResetRender=true;
         }
     }
+
+    App->Controller.Locked = !ImGui::IsWindowFocused() || ImGuizmo::IsUsing() || ImGuizmo::IsOver();
     ImGui::End();
 
 }
 }
+

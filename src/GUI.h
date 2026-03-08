@@ -49,6 +49,10 @@ public:
 
     
     ImGuizmo::OPERATION CurrentGizmoOperation = (ImGuizmo::TRANSLATE);
-    ImGuizmo::MODE CurrentGizmoMode = (ImGuizmo::WORLD);    
+    ImGuizmo::MODE CurrentGizmoMode = (ImGuizmo::WORLD);
+
+    bool ShowOrientationGizmo = true;
+    float OrientationGizmoSize = 110.0f;
+    float OrientationGizmoMargin = 16.0f;
 };
 }
