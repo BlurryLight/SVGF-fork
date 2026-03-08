@@ -29,6 +29,24 @@ std::string ExtractFilename(const std::string& filePath) {
     }
 }
 
+
+    bool CheckTransformMatrixValid(const glm::mat4 &matrix)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (std::isnan(matrix[i][j]) || std::isinf(matrix[i][j]))
+                {
+                    return false;
+                }
+            }
+        }
+        glm::mat3x3 UpperLeft = glm::mat3x3(matrix);
+        float det = glm::determinant(UpperLeft);
+        return true;
+    }
+
 void DecomposeMatrixToComponents(glm::mat4 &matrix, float* translation, float* rotation, float* scale)
 {
     scale[0] = glm::length(glm::vec3(glm::column(matrix, 0)));
@@ -1231,6 +1249,9 @@ void gui::GUI()
         ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
 
         glm::mat4 CorrectedTransform = glm::translate(ModelMatrix, App->Scene->Shapes[Instance.Shape].Centroid);
+        assert(CheckTransformMatrixValid(CorrectedTransform));
+        assert(CheckTransformMatrixValid(ViewMatrix));
+        assert(CheckTransformMatrixValid(CurrentCamera.ProjectionMatrix));
         if(ImGuizmo::Manipulate(glm::value_ptr(ViewMatrix), glm::value_ptr(CurrentCamera.ProjectionMatrix), CurrentGizmoOperation, CurrentGizmoMode, glm::value_ptr(CorrectedTransform), NULL, NULL))
         {
             App->Scene->Instances[SelectedInstance].Transform = glm::translate(CorrectedTransform, -App->Scene->Shapes[Instance.Shape].Centroid);

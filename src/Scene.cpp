@@ -217,7 +217,7 @@ void shape::PreProcess()
     }
 
     double InverseSize = 1.0 / double(this->PositionsTmp.size()); 
-    glm::dvec3 Centroid;
+    glm::dvec3 Centroid{}; // must initialzie
     for(size_t j=0; j < this->PositionsTmp.size(); j++)
     {
         Centroid += glm::dvec3(this->PositionsTmp[j]) * InverseSize;
