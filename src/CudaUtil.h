@@ -87,7 +87,7 @@ struct cudaTextureMapping
     }
 };
 
-std::shared_ptr<cudaTextureMapping> CreateMapping(std::shared_ptr<textureGL> Tex, bool Write=false, bool CreateWithMapping = true)
+inline std::shared_ptr<cudaTextureMapping> CreateMapping(std::shared_ptr<textureGL> Tex, bool Write=false, bool CreateWithMapping = true)
 {
     std::shared_ptr<cudaTextureMapping> Result = std::make_shared<cudaTextureMapping>();
     Result->Init(Tex->TextureID, Tex->Width, Tex->Height, 4 * sizeof(uint8_t), Write);
@@ -102,7 +102,7 @@ std::shared_ptr<cudaTextureMapping> CreateMapping(std::shared_ptr<textureGL> Tex
     return Result;
 }   
 
-std::shared_ptr<cudaTextureMapping> CreateMapping(GLuint TexID, int Width, int Height, uint32_t ElemSize, bool bWriteOnly =false, bool CreateWithMapping = true)
+inline std::shared_ptr<cudaTextureMapping> CreateMapping(GLuint TexID, int Width, int Height, uint32_t ElemSize, bool bWriteOnly =false, bool CreateWithMapping = true)
 {
     CUDA_CHECK_ERROR(cudaGetLastError());
 

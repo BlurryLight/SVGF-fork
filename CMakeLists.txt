@@ -35,16 +35,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 message(STATUS "[DEBUG] Output directories set: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}, ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
 
 
-
-set(API_GL 0)
-set(API_CU 1)
-set(API ${API_CU})
-
-message(STATUS "[DEBUG] API Configuration: API_GL=${API_GL}, API_CU=${API_CU}, USE_API=${API}")
-
-# Use target_compile_definitions instead of add_definitions for project-specific definitions
-set(PROJECT_DEFINES "-DAPI_GL=${API_GL}" "-DAPI_CU=${API_CU}" "-DAPI=${API}")
-
 set(USE_OPTIX 0)
 message(STATUS "[DEBUG] USE_OPTIX=${USE_OPTIX}")
 
@@ -132,14 +122,11 @@ message(STATUS "[DEBUG] CUDA_VERSION: ${CUDAToolkit_VERSION}")
 message(STATUS "[DEBUG] CUDA_TOOLKIT_ROOT: ${CUDAToolkit_ROOT}")
 message(STATUS "[DEBUG] CUDA_NVCC_EXECUTABLE: ${CUDAToolkit_NVCC_EXECUTABLE}")
 
-# Configure CUDA-specific flags using modern CMake CUDA support
-list(APPEND CMAKE_CUDA_FLAGS "-lineinfo")
-list(APPEND CMAKE_CUDA_FLAGS "--generate-line-info")
-list(APPEND CMAKE_CUDA_FLAGS "-diag-suppress=20012") # Suppress warning about host/device label on default constructor
-list(APPEND CMAKE_CUDA_FLAGS "-diag-suppress=20013") # Suppress constexpr function
+
 
 message(STATUS "[DEBUG] CMAKE_CUDA_FLAGS: ${CMAKE_CUDA_FLAGS}")
 message(STATUS "[DEBUG] CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
+message(STATUS "[DEBUG] CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 set(CUDA_LIB_DIR "$ENV{CUDA_PATH}/lib/x64")
 message(STATUS "[DEBUG] CUDA_LIB_DIR: ${CUDA_LIB_DIR}")
@@ -147,20 +134,28 @@ message(STATUS "[DEBUG] CUDA_LIB_DIR: ${CUDA_LIB_DIR}")
 # ========== Compiler-specific options ==========
 # These will be applied only to the main target, not to subprojects
 set(PATHTRACER_COMPILE_OPTS)
-set(PATHTRACER_COMPILE_DEFS ${PROJECT_DEFINES} "USE_OPTIX=${USE_OPTIX}")
+set(PATHTRACER_COMPILE_DEFS "USE_OPTIX=${USE_OPTIX}")
 set(PATHTRACER_CUDA_OPTS)
 
 if(MSVC)
     message(STATUS "[DEBUG] MSVC Compiler detected")
     message(STATUS "[DEBUG] Compiler: ${CMAKE_CXX_COMPILER_ID}")
     message(STATUS "[DEBUG] Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
-    
-    list(APPEND PATHTRACER_COMPILE_OPTS "/utf-8" "/wd4819")
+
+    # Keep noisy narrowing/size-conversion warnings from drowning useful diagnostics.
+    set(MSVC_DISABLED_WARNINGS 4819 4244 4267 4305)
+
+    list(APPEND PATHTRACER_COMPILE_OPTS "/utf-8")
+    foreach(_w ${MSVC_DISABLED_WARNINGS})
+        list(APPEND PATHTRACER_COMPILE_OPTS "/wd${_w}")
+    endforeach()
     list(APPEND PATHTRACER_COMPILE_DEFS "_CRT_SECURE_NO_WARNINGS")
-    
-    # For CUDA compile with MSVC - use proper syntax
+
+    # Apply the same warning suppressions when NVCC invokes the MSVC host compiler.
     list(APPEND PATHTRACER_CUDA_OPTS -Xcompiler="/utf-8")
-    list(APPEND PATHTRACER_CUDA_OPTS -Xcompiler="/wd4819")
+    foreach(_w ${MSVC_DISABLED_WARNINGS})
+        list(APPEND PATHTRACER_CUDA_OPTS -Xcompiler="/wd${_w}")
+    endforeach()
 endif()
 
 set (sourceFiles
@@ -239,6 +234,13 @@ target_compile_options(PathTracer PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:${PATHTRACER_CUDA_OPTS}>
 )
 
+target_compile_options(PathTracer PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        --generate-line-info
+#        --use_fast_math
+#        --relocatable-device-code=true
+        --diag-suppress=20012,20014,177,20013
+        >)
+
 # Add target-specific compile definitions
 target_compile_definitions(PathTracer PRIVATE ${PATHTRACER_COMPILE_DEFS})
 
@@ -267,13 +269,14 @@ message(STATUS "========== Ready to Build ==========")
 install(TARGETS PathTracer RUNTIME)
 
 # Create symbolic link for resources directory
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/resources)
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/bin/resources)
     if (UNIX)
-        execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink ${CMAKE_SOURCE_DIR}/recourses ${CMAKE_BINARY_DIR}/resources)
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink ${CMAKE_SOURCE_DIR}/bin/recourses ${CMAKE_BINARY_DIR}/resources)
     else()
         # also there is symlink/hardlink on windows, it requires admin permission
         file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/bin/resources" _dstDir)
         file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/resources" _srcDir)
+        message(STATUS "[DEBUG] Creating symbolic link: ${_dstDir} <- ${_srcDir}")
         execute_process(COMMAND cmd.exe /c mklink /J "${_dstDir}" "${_srcDir}")
     endif()
 endif()

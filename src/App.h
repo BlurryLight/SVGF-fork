@@ -16,7 +16,7 @@ class window;
 class shaderGL;
 class uniformBufferGL;
 class textureGL;
-class cudaTextureMapping;
+struct cudaTextureMapping;
 struct scene;
 class buffer;
 class gui;

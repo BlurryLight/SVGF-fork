@@ -1,0 +1,45 @@
+{
+    "configurations": [
+        {
+            "name": "Windows CUDA",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/submodules/**",
+                "${workspaceFolder}/submodules/glm",
+                "${workspaceFolder}/submodules/dearimgui",
+                "${workspaceFolder}/submodules/dearimgui/backends",
+                "${workspaceFolder}/submodules/ImGuizmo",
+                "${workspaceFolder}/submodules/tinygltf",
+                "${workspaceFolder}/submodules/stb",
+                "${workspaceFolder}/submodules/fileDialog/src/include",
+                "${workspaceFolder}/submodules/assimp/include",
+                "${workspaceFolder}/submodules/glad/include",
+                "${workspaceFolder}/submodules/glfw/include",
+                "${workspaceFolder}/build/vscode-Visual Studio Community 2022 Release - amd64-Debug",
+                "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2\\include",
+                "C:\\ProgramData\\NVIDIA Corporation\\OptiX SDK 8.0.0\\include"
+            ],
+            "defines": [
+                "WIN32",
+                "_WINDOWS",
+                "NOMINMAX",
+                "__CUDACC__",
+                "CUDA_TOOLKIT_ROOT=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2"
+            ],
+            "compilerPath": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2\\bin\\nvcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2\\include",
+                    "C:\\ProgramData\\NVIDIA Corporation\\OptiX SDK 8.0.0\\include"
+                ],
+                "limitSymbolsToIncludedHeaders": false,
+                "databaseFilename": "${workspaceFolder}/.vscode/.browse.VC.db"
+            }
+        }
+    ],
+    "version": 4
+}

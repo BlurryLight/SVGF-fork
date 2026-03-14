@@ -1,4 +1,5 @@
 #include "TextureGL.h"
+#include <stdexcept>
 
 #include "assert.h"
 
@@ -54,6 +55,8 @@ GLint GetInternalFormat(textureGL::channels Channel, textureGL::types Type)
     default:
         break;
     }
+    throw std::runtime_error("Unsupported texture format");
+    return GL_INVALID_VALUE;
 }
 
 GLenum GetFormat(textureGL::channels Channel, textureGL::types Type)
@@ -70,6 +73,7 @@ GLenum GetFormat(textureGL::channels Channel, textureGL::types Type)
             return GL_RGBA;
         break;
     default:
+        throw std::runtime_error("Unsupported texture format");
         break;
     }
 }
@@ -88,6 +92,7 @@ GLenum GetType(textureGL::types Type)
         return GL_FLOAT;
         break;
     default:
+        throw std::runtime_error("Unsupported texture format");
         break;
     }
 }

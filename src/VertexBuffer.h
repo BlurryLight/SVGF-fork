@@ -17,7 +17,7 @@ struct vertex
     uint32_t PrimitiveIndex;
 };
 
-class vertexBuffer
+struct vertexBuffer
 {
 public:
     vertexBuffer(scene *Scene);
