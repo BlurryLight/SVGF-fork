@@ -10,40 +10,30 @@
 namespace gpupt
 {
 shaderGL::shaderGL(const char* computePath) {
-    std::string VShaderCode = ReadFile(computePath);
-    GLuint Shader = CompileShader(GL_COMPUTE_SHADER, VShaderCode.c_str());
-    ID = LinkShader(Shader);
-    glDeleteShader(Shader);
+    std::string shaderCode = ReadFile(computePath);
+
+    gl::Shader shader(gl::ShaderType::kComputeShader);
+    shader.set_source(shaderCode);
+    shader.compile();
+
+    program_.attachShader(shader);
+    program_.link();
 }
 
 shaderGL::shaderGL(const char* VertexPath, const char *FragmentPath) {
-    std::string VShaderCode = ReadFile(VertexPath);
-    GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, VShaderCode.c_str());
-    std::string FShaderCode = ReadFile(FragmentPath);
-    GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, FShaderCode.c_str());
-    
-    if (!VertexShader || !FragmentShader) {
-        std::cerr << "Failed to create shader program." << std::endl;
-        exit(0);
-    }
+    std::string vShaderCode = ReadFile(VertexPath);
+    std::string fShaderCode = ReadFile(FragmentPath);
 
-    ID = glCreateProgram();
-    glAttachShader(ID, VertexShader);
-    glAttachShader(ID, FragmentShader);
-    glLinkProgram(ID);
+    gl::Shader vertexShader(gl::ShaderType::kVertexShader);
+    vertexShader.set_source(vShaderCode);
+    vertexShader.compile();
 
-    GLint success;
-    glGetProgramiv(ID, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetProgramInfoLog(ID, 512, NULL, infoLog);
-        std::cerr << "Shader program linking error:\n" << infoLog << std::endl;
-        glDeleteProgram(ID);
-        exit(0);
-    }
+    gl::Shader fragmentShader(gl::ShaderType::kFragmentShader);
+    fragmentShader.set_source(fShaderCode);
+    fragmentShader.compile();
 
-    glDeleteShader(VertexShader);
-    glDeleteShader(FragmentShader);
+    program_.attachShaders(vertexShader, fragmentShader);
+    program_.link();
 }
 
 shaderGL::~shaderGL()
@@ -53,37 +43,36 @@ shaderGL::~shaderGL()
 
 void shaderGL::Destroy()
 {
-    glDeleteProgram(this->ID);
+    // oglwrap handles automatic cleanup via RAII
 }
 
 void shaderGL::Use() {
-    glUseProgram(ID);
+    gl::Bind(program_);
 }
 
 // Utility functions to bind values to the shader
 void shaderGL::SetInt(const std::string& name, int value) {
-    glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+    gl::Uniform<int>(program_, name).set(value);
 }
 
 void shaderGL::SetMat4(const std::string& name, glm::mat4 &Matrix) {
-    glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(Matrix));
+    gl::Uniform<glm::mat4>(program_, name).set(Matrix);
 }
 
 void shaderGL::SetVec3(const std::string& name, glm::vec3 &Vector) {
-    glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(Vector));
+    gl::Uniform<glm::vec3>(program_, name).set(Vector);
 }
 
 void shaderGL::SetTexture(int ImageUnit, GLuint TextureID, GLenum Access) {
     glBindImageTexture(ImageUnit, TextureID, 0, GL_FALSE, 0, Access, GL_RGBA32F);
 }
 
-void shaderGL::SetTexture(int ImageUnit, GLuint TextureID) const {    
+void shaderGL::SetTexture(int ImageUnit, GLuint TextureID) const {
     glBindTextureUnit(ImageUnit, TextureID);
 }
 
 void shaderGL::SetSSBO(std::shared_ptr<bufferGL> Buffer, int BindingPoint)
 {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, Buffer->BufferID);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, BindingPoint, Buffer->BufferID);
 }
 
@@ -96,7 +85,7 @@ void shaderGL::SetTextureArray(std::shared_ptr<textureArrayGL> Texture, int Unit
 {
     glActiveTexture(GL_TEXTURE0 + Unit);
     glBindTexture(GL_TEXTURE_2D_ARRAY, Texture->TextureID);
-    glUniform1i(glGetUniformLocation(ID, Name.c_str()), Unit);
+    gl::Uniform<int>(program_, Name).set(Unit);
 }
 
 void shaderGL::Dispatch(uint32_t X, uint32_t Y, uint32_t Z)
@@ -130,7 +119,7 @@ std::string shaderGL::ReadFile(const char* FilePath) const {
         {
             LineBuffer.erase(0, IncludeIdentifier.size());
             size_t found = std::string(FilePath).find_last_of("/\\");
-            std::string PathWithoutFileName = std::string(FilePath).substr(0, found + 1);                
+            std::string PathWithoutFileName = std::string(FilePath).substr(0, found + 1);
             LineBuffer.insert(0, PathWithoutFileName);
             RecursiveCall = true;
             FullSource += ReadFile(LineBuffer.c_str());
@@ -147,53 +136,13 @@ std::string shaderGL::ReadFile(const char* FilePath) const {
 
     File.close();
 
-    return FullSource;       
+    return FullSource;
 }
 
-
-// Utility function to compile a shader
-GLuint shaderGL::CompileShader(GLenum Type, const char* SourceCode) const {
-    GLuint Shader = glCreateShader(Type);
-    glShaderSource(Shader, 1, &SourceCode, nullptr);
-    glCompileShader(Shader);
-
-    // Check for compilation errors
-    int Success;
-    char InfoLog[512];
-    glGetShaderiv(Shader, GL_COMPILE_STATUS, &Success);
-    if (!Success) {
-        glGetShaderInfoLog(Shader, 512, nullptr, InfoLog);
-        std::cout << "Shader compilation error: " << InfoLog << std::endl;
-        std::string Src(SourceCode);
-        int LineNumber = 1;
-        std::istringstream iss(Src);
-        std::string line;        
-        while (std::getline(iss, line)) {
-            std::cout << "Line " << LineNumber << ": " << line << std::endl;
-            LineNumber++;
-        }
-        exit(0);
-    }
-
-    return Shader;
-}
-
-// Utility function to link shaders into a program
-GLuint shaderGL::LinkShader(GLuint ComputeShader) const {
-    GLuint Program = glCreateProgram();
-    glAttachShader(Program, ComputeShader);
-    glLinkProgram(Program);
-
-    // Check for linking errors
-    int Success;
-    char InfoLog[512];
-    glGetProgramiv(Program, GL_LINK_STATUS, &Success);
-    if (!Success) {
-        glGetProgramInfoLog(Program, 512, nullptr, InfoLog);
-        std::cout << "Shader linking error: " << InfoLog << std::endl;
-        exit(0);
-    }
-
-    return Program;
+// Compile helper method (wrapper around oglwrap shader compilation)
+void shaderGL::CompileShader(gl::ShaderType Type, const char* SourceCode) const {
+    gl::Shader shader(Type);
+    shader.set_source(SourceCode);
+    shader.compile();
 }
 }

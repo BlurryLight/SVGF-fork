@@ -1,67 +1,73 @@
 #include "TextureArrayGL.h"
+#include <oglwrap/context/binding.h>
 
 namespace gpupt
 {
     textureArrayGL::textureArrayGL() : TextureID(0) {}
 
     textureArrayGL::~textureArrayGL() {
-        if (TextureID != 0) {
-            glDeleteTextures(1, &TextureID);
-        }
+        // oglwrap handles automatic cleanup via RAII
     }
 
     void textureArrayGL::CreateTextureArray(int Width, int Height, int Layers, bool _IsFloat) {
-        this->IsFloat = IsFloat;
+        this->IsFloat = _IsFloat;
 
-        glGenTextures(1, &TextureID);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, TextureID);
+        gl::Bind(texture_);
 
-        // Set texture parameters
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        // Set texture parameters using oglwrap
+        texture_.minFilter(gl::MinFilter::kLinear);
+        texture_.magFilter(gl::MagFilter::kLinear);
+        texture_.wrapS(gl::WrapMode::kRepeat);
+        texture_.wrapT(gl::WrapMode::kRepeat);
 
-        // Allocate storage for the texture array
-        GLint InternalFormat;
-        GLenum Format;
-        GLenum Type;
+        // Determine format based on IsFloat
+        gl::PixelDataInternalFormat internalFormat;
+        gl::PixelDataFormat format;
+        gl::PixelDataType type;
+
         if(IsFloat)
         {
-            InternalFormat = GL_RGBA32F;
-            Format = GL_RGBA;
-            Type = GL_FLOAT;
+            internalFormat = gl::PixelDataInternalFormat::kRgba32F;
+            format = gl::PixelDataFormat::kRgba;
+            type = gl::PixelDataType::kFloat;
         }
         else
         {
-            InternalFormat = GL_RGBA;
-            Format = GL_RGBA;
-            Type = GL_UNSIGNED_BYTE;
+            internalFormat = gl::PixelDataInternalFormat::kRgba;
+            format = gl::PixelDataFormat::kRgba;
+            type = gl::PixelDataType::kUnsignedByte;
         }
 
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, InternalFormat, Width, Height, Layers, 0, Format, Type, nullptr);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        // Allocate storage for the texture array
+        texture_.upload(internalFormat, Width, Height, Layers, format, type, nullptr);
+
+        // Expose the OpenGL ID for external compatibility
+        TextureID = texture_.expose();
     }
 
     void textureArrayGL::LoadTextureLayer(int layerIndex, const std::vector<uint8_t>& imageData, int Width, int Height) {
-        glBindTexture(GL_TEXTURE_2D_ARRAY, TextureID);
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, Width, Height, 1, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        gl::Bind(texture_);
+        texture_.subUpload(0, 0, layerIndex, Width, Height, 1,
+                          gl::PixelDataFormat::kRgba,
+                          gl::PixelDataType::kUnsignedByte,
+                          imageData.data());
     }
 
     void textureArrayGL::LoadTextureLayer(int layerIndex, const std::vector<float>& imageData, int Width, int Height) {
-        glBindTexture(GL_TEXTURE_2D_ARRAY, TextureID);
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, Width, Height, 1, GL_RGBA, GL_FLOAT, imageData.data());
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        gl::Bind(texture_);
+        texture_.subUpload(0, 0, layerIndex, Width, Height, 1,
+                          gl::PixelDataFormat::kRgba,
+                          gl::PixelDataType::kFloat,
+                          imageData.data());
     }
 
     void textureArrayGL::Bind(int textureUnit){
         glActiveTexture(GL_TEXTURE0 + textureUnit);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, TextureID);
+        gl::Bind(texture_);
     }
 
     void textureArrayGL::Unbind() const {
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        gl::Unbind(gl::TextureType::kTexture2DArray);
     }
 
 }

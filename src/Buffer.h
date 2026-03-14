@@ -2,6 +2,7 @@
 #include <glad/gl.h>
 
 #include <vector>
+#include <oglwrap/buffer.h>
 
 namespace gpupt
 {
@@ -27,7 +28,10 @@ public:
     void updateData(size_t offset, const void* data, size_t dataSize);
     void Reallocate(const void* data, size_t dataSize);
 
-    GLuint BufferID;
+    GLuint BufferID;  // Exposed for external compatibility
+
+private:
+    gl::BufferObject<gl::BufferType::kShaderStorageBuffer> buffer_;
 };
 
 
@@ -38,7 +42,10 @@ public:
     ~uniformBufferGL();
     void Destroy();
     void updateData(const void* data, size_t dataSize);
-    GLuint BufferID;
+    GLuint BufferID;  // Exposed for external compatibility
+
+private:
+    gl::BufferObject<gl::BufferType::kUniformBuffer> buffer_;
 };
 
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <glad/gl.h>
+#include <oglwrap/textures/texture_3D.h>
 
 namespace gpupt
 {
@@ -15,7 +16,10 @@ public:
     void Bind(int textureUnit = 0);
     void Unbind() const;
 
-    GLuint TextureID;
+    GLuint TextureID;  // Exposed for external compatibility
     bool IsFloat=false;
-};    
+
+private:
+    gl::Texture2DArray texture_;
+};
 }

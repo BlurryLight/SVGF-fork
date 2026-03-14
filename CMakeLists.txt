@@ -225,6 +225,7 @@ target_include_directories(PathTracer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/submodules/glad/include
     ${CMAKE_CURRENT_BINARY_DIR}/submodules/assimp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/submodules/assimp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/submodules
     ${OptiX_INCLUDE_DIR}
 )
 

@@ -3,6 +3,9 @@
 #include <memory>
 #include <glad/gl.h>
 #include <glm/mat4x4.hpp>
+#include <oglwrap/program.h>
+#include <oglwrap/shader.h>
+#include <oglwrap/uniform.h>
 
 namespace gpupt
 {
@@ -29,10 +32,9 @@ public:
     void Dispatch(uint32_t X, uint32_t Y, uint32_t Z);
     void Barrier();
     ~shaderGL();
-private:   
-    GLuint ID;
+private:
+    gl::Program program_;  // oglwrap program object
     std::string ReadFile(const char* FilePath) const;
-    GLuint CompileShader(GLenum Type, const char* SourceCode) const;
-    GLuint LinkShader(GLuint ComputeShader) const;
-};        
+    void CompileShader(gl::ShaderType Type, const char* SourceCode) const;
+};
 }

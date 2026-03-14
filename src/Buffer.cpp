@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "oglwrap/buffer-inl.h"
 
 #include <cuda_runtime.h>
 #include <cuda_texture_types.h>
@@ -42,17 +43,13 @@ void buffer::updateData(size_t offset, const void* data, size_t DataSize) {
 
 
 bufferGL::bufferGL(size_t DataSize, const void* InitData) {
-    glGenBuffers(1, &BufferID);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, BufferID);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, DataSize, InitData, GL_DYNAMIC_COPY);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    buffer_.data(DataSize, InitData, gl::BufferUsage::kDynamicCopy);
+    BufferID = buffer_.expose();
 }
 
 void bufferGL::Reallocate(const void* InitData, size_t DataSize)
 {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, BufferID);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, DataSize, InitData, GL_DYNAMIC_COPY);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    buffer_.data(DataSize, InitData, gl::BufferUsage::kDynamicCopy);
 }
 
 bufferGL::~bufferGL() {
@@ -62,20 +59,16 @@ bufferGL::~bufferGL() {
 
 void bufferGL::Destroy()
 {
-    glDeleteBuffers(1, &BufferID);
+    // oglwrap handles automatic cleanup via RAII
     BufferID = (GLuint)-1;
 }
 
 void bufferGL::updateData(const void* data, size_t DataSize) {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, BufferID);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, DataSize, data);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    buffer_.subData(0, DataSize, static_cast<const uint8_t*>(data));
 }
 
 void bufferGL::updateData(size_t offset, const void* data, size_t DataSize) {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, BufferID);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, DataSize, data);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    buffer_.subData(offset, DataSize, static_cast<const uint8_t*>(data));
 }
 
 
@@ -83,10 +76,9 @@ void bufferGL::updateData(size_t offset, const void* data, size_t DataSize) {
 // 
 
 uniformBufferGL::uniformBufferGL(size_t DataSize, const void* data) {
-    glGenBuffers(1, &BufferID);
-    glBindBuffer(GL_UNIFORM_BUFFER, BufferID);
-    glBufferData(GL_UNIFORM_BUFFER, DataSize, data, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    buffer_.data(DataSize, data, gl::BufferUsage::kDynamicDraw);
+    BufferID = buffer_.expose();
+    // Bind to uniform buffer point 8 (as in original implementation)
     glBindBufferBase(GL_UNIFORM_BUFFER, 8, BufferID);
 }
 
@@ -97,15 +89,12 @@ uniformBufferGL::~uniformBufferGL() {
 
 void uniformBufferGL::Destroy()
 {
-    glDeleteBuffers(1, &BufferID);
+    // oglwrap handles automatic cleanup via RAII
     BufferID = -1;
 }
 
 void uniformBufferGL::updateData(const void* data, size_t DataSize) {
-    glBindBuffer(GL_UNIFORM_BUFFER, BufferID);
-    glBufferData(GL_UNIFORM_BUFFER, DataSize, data, GL_DYNAMIC_DRAW);
-    // glBufferSubData(GL_UNIFORM_BUFFER, 0, DataSize, data);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    buffer_.data(DataSize, data, gl::BufferUsage::kDynamicDraw);
 }
 
 

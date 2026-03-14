@@ -2,6 +2,8 @@
 #include <vector>
 #include <glad/gl.h>
 #include <memory>
+#include <oglwrap/framebuffer.h>
+#include <oglwrap/textures/texture_2D.h>
 
 namespace gpupt
 {
@@ -34,11 +36,11 @@ public:
     int32_t m_Height = -1;
     std::vector<framebufferDescriptor> m_Descriptors;
 
-    std::vector<std::shared_ptr<cudaTextureMapping>> CudaMappings;
+    std::vector<std::shared_ptr<cudaTextureMapping>> CudaMappings;  // CRITICAL: Must preserve for CUDA interop
 private:
-    GLuint FBO;
-    std::vector<GLuint> Textures;
-    GLuint DepthTexture;
+    gl::FramebufferObject<gl::FramebufferType::kDrawFramebuffer> fbo_;
+    std::vector<gl::Texture2D> colorTextures_;  // oglwrap textures for color attachments
+    gl::Texture2D depthTexture_;  // oglwrap texture for depth attachment
 };
 
 }

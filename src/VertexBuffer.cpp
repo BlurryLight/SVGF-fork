@@ -1,5 +1,7 @@
 #include "VertexBuffer.h"
 #include "Scene.h"
+#include <oglwrap/vertex_attrib.h>
+#include <oglwrap/context/binding.h>
 
 namespace gpupt
 {
@@ -68,14 +70,12 @@ vertexBuffer::vertexBuffer(scene *Scene)
 
     Count = Indices.size();
 
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);  
+    // Setup VAO using oglwrap
+    gl::Bind(vao_);
 
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, Vertices.size() * sizeof(vertex), Vertices.data(), GL_STATIC_DRAW);       
+    // Setup VBO using oglwrap
+    vbo_.data(Vertices, gl::BufferUsage::kStaticDraw);
 
-    // Assuming each vertex has a position (3 floats), normal (3 floats), and tex coords (2 floats)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
 
@@ -83,32 +83,41 @@ vertexBuffer::vertexBuffer(scene *Scene)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(3 * sizeof(float)));
 
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(6 * sizeof(float)));     
-    
-    glEnableVertexAttribArray(3);
-    glVertexAttribIPointer(3, 1, GL_UNSIGNED_INT, sizeof(vertex), (void*)(8 * sizeof(float)));     
-    // glVertexAttribIPointer()
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(uint32_t), Indices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(6 * sizeof(float)));
 
-    glBindVertexArray(0);         
+    glEnableVertexAttribArray(3);
+    glVertexAttribIPointer(3, 1, GL_UNSIGNED_INT, sizeof(vertex), (void*)(8 * sizeof(float)));
+
+    // gl::VertexAttrib Position(0);
+    // Position.pointer(3,
+
+// Setup EBO using oglwrapebo_.data(Indices, gl::BufferUsage::kStaticDraw);
+
+    // Setup EBO using oglwrap
+    ebo_.data(Indices, gl::BufferUsage::kStaticDraw);
+
+    // Expose OpenGL IDs for external compatibility
+    VAO = vao_.expose();
+    VBO = vbo_.expose();
+    EBO = ebo_.expose();
+
+    gl::Unbind(vao_);
 }
 
 void vertexBuffer::Draw(uint32_t ShapeIndex)
 {
-    glBindVertexArray(VAO);
+    gl::Bind(vao_);
 
     uint32_t Count = Offsets[ShapeIndex+1] - Offsets[ShapeIndex];
-    glDrawElements(GL_TRIANGLES, Count, GL_UNSIGNED_INT, (void*)(Offsets[ShapeIndex] * sizeof(uint32_t)));    
-    glBindVertexArray(0);
+    glDrawElements(GL_TRIANGLES, Count, GL_UNSIGNED_INT, (void*)(Offsets[ShapeIndex] * sizeof(uint32_t)));
+
+    gl::Unbind(vao_);
 }
 
 vertexBuffer::~vertexBuffer()
 {
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);    
+    // oglwrap handles automatic cleanup via RAII
+    // No manual deletion needed
 }
 
 }

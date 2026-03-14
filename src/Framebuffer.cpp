@@ -1,5 +1,6 @@
 #include "Framebuffer.h"
 #include "CudaUtil.h"
+#include <oglwrap/context/binding.h>
 
 namespace gpupt
 {
@@ -10,56 +11,75 @@ framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescripto
     m_Height = Height;
     m_Descriptors = Descriptors;
 
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    colorTextures_.resize(Descriptors.size());
 
-    Textures.resize(Descriptors.size());
-    std::vector<GLuint> Attachments(Descriptors.size());
+    // Bind the framebuffer using oglwrap
+    gl::Bind(fbo_);
 
-    glGenTextures(Descriptors.size(), &Textures[0]);
+    std::vector<gl::FramebufferAttachment> Attachments(Descriptors.size());
+
+    // Create and attach color textures using oglwrap
     for(int i=0; i<Descriptors.size(); i++)
     {
-        glBindTexture(GL_TEXTURE_2D, Textures[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, Descriptors[i].InternalFormat, Width, Height, 0, Descriptors[i].Format, Descriptors[i].Type, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, Textures[i], 0);
+        gl::Bind(colorTextures_[i]);
+        colorTextures_[i].upload(
+            static_cast<gl::PixelDataInternalFormat>(Descriptors[i].InternalFormat),
+            Width, Height,
+            static_cast<gl::PixelDataFormat>(Descriptors[i].Format),
+            static_cast<gl::PixelDataType>(Descriptors[i].Type),
+            nullptr
+        );
+        colorTextures_[i].minFilter(gl::MinFilter::kNearest);
+        colorTextures_[i].magFilter(gl::MagFilter::kNearest);
 
-        Attachments[i] = GL_COLOR_ATTACHMENT0 + i;
+        // Attach texture to framebuffer
+        fbo_.attachTexture(static_cast<gl::FramebufferAttachment>(GL_COLOR_ATTACHMENT0 + i), colorTextures_[i]);
+
+        Attachments[i] = static_cast<gl::FramebufferAttachment>(GL_COLOR_ATTACHMENT0 + i);
     }
-    glDrawBuffers(Attachments.size(), Attachments.data());
 
-    glGenTextures(1, &DepthTexture);
-    glBindTexture(GL_TEXTURE_2D, DepthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Width, Height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthTexture, 0);
+    // Set draw buffers
+    glDrawBuffers(Attachments.size(), reinterpret_cast<GLenum*>(Attachments.data()));
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    // Create and attach depth texture using oglwrap
+    gl::Bind(depthTexture_);
+    depthTexture_.upload(
+        gl::PixelDataInternalFormat::kDepthComponent,
+        Width, Height,
+        gl::PixelDataFormat::kDepthComponent,
+        gl::PixelDataType::kFloat,
+        nullptr
+    );
+    depthTexture_.minFilter(gl::MinFilter::kNearest);
+    depthTexture_.magFilter(gl::MagFilter::kNearest);
+    fbo_.attachTexture(gl::FramebufferAttachment::kDepthAttachment, depthTexture_);
+
+    // Validate framebuffer
+    if(fbo_.status() != gl::FramebufferStatus::kFramebufferComplete) {
         assert(false);
         exit(0);
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    gl::Unbind(fbo_);
 
+    // CRITICAL: Create CUDA mappings using the OpenGL texture IDs
     CudaMappings.resize(Descriptors.size());
-    for(int i=0; i<CudaMappings.size(); i++) 
+    for(int i=0; i<CudaMappings.size(); i++)
     {
-        CudaMappings[i] = CreateMapping(Textures[i], Width, Height, Descriptors[i].ElemSize, false, false);
+        // Use expose().handle() to get the underlying OpenGL texture ID for CUDA
+        GLuint texID = colorTextures_[i].expose();
+        CudaMappings[i] = CreateMapping(texID, Width, Height, Descriptors[i].ElemSize, false, false);
     }
 
 }
 
 void framebuffer::Destroy()
 {
-    CudaMappings = {}; // clear all cuda mapping
-    glDeleteTextures(1, &DepthTexture);
-    for(int i=0; i<Textures.size(); i++)
-    {
-        glDeleteTextures(1, &Textures[i]);
-    }
-    glDeleteFramebuffers(1, &FBO);
+    // Clear CUDA mappings first
+    CudaMappings = {};
+
+    // oglwrap handles automatic cleanup via RAII
+    // No manual deletion of textures or FBO needed
 }
 
 framebuffer::~framebuffer()
@@ -70,29 +90,35 @@ framebuffer::~framebuffer()
 
 void framebuffer::Bind()
 {
+    // CRITICAL: Unmap CUDA resources before OpenGL rendering
     for(int i = 0; i < CudaMappings.size(); i++) {
         if (CudaMappings[i]) {
             CudaMappings[i]->Unmap();
         }
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    // Bind framebuffer using oglwrap
+    gl::Bind(fbo_);
 }
+
 void framebuffer::Unbind()
 {
-    // 重新映射所有资源，以便CUDA可以访问它们
+    // CRITICAL: Remap CUDA resources after OpenGL rendering
     for(int i = 0; i < CudaMappings.size(); i++) {
         if (CudaMappings[i]) {
             CudaMappings[i]->Map();
         }
     }
 
-   glBindFramebuffer(GL_FRAMEBUFFER,0);
+    // Unbind framebuffer using oglwrap
+    gl::Unbind(fbo_);
 }
 
 
 GLuint framebuffer::GetTexture(int Index)
 {
-    return Textures[Index];
-}   
+    // Use expose().handle() to get the underlying OpenGL texture ID
+    return colorTextures_[Index].expose();
+}
 
 }

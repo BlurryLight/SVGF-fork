@@ -3,6 +3,8 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <vector>
+#include <oglwrap/vertex_array.h>
+#include <oglwrap/buffer.h>
 
 namespace gpupt
 {
@@ -27,11 +29,16 @@ public:
 
     std::vector<uint32_t> Offsets;
 
-    GLuint VAO;
-    GLuint VBO;
-    GLuint EBO;
+    GLuint VAO;  // Exposed for external compatibility
+    GLuint VBO;  // Exposed for external compatibility
+    GLuint EBO;  // Exposed for external compatibility
 
     uint32_t Count=0;
+
+private:
+    gl::VertexArray vao_;
+    gl::ArrayBuffer vbo_;
+    gl::IndexBuffer ebo_;
 };
 
 }
