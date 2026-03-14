@@ -71,7 +71,7 @@ struct material
     glm::vec3 Emission = glm::vec3(0.0f);
     float Roughness = 0.0f;
 
-    glm::vec3 Colour = glm::vec3(1.0f);
+    glm::vec3 Colour = glm::vec3(0.0f);
     float Metallic = 0.0f;
 
     float Padding = 0.0f;

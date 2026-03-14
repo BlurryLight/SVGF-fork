@@ -178,6 +178,7 @@ set (sourceFiles
         src/Tracing.cpp
         src/GUI.cpp
         src/BVH.cpp
+        src/GPUTimer.cpp
         ${IMGUI_SOURCE}
         ${FILEDIALOG_SOURCE}
         ${GLAD_SOURCE}

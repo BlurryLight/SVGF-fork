@@ -1,5 +1,6 @@
 #include "GUI.h"
 #include <imgui.h>
+#include <algorithm>
 
 #include "App.h"
 
@@ -1157,7 +1158,9 @@ void gui::GUI()
 
     ImGui::SetNextWindowPos(ImVec2(GuiWidth,0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(App->RenderWindowWidth, App->RenderWindowHeight), ImGuiCond_Always);
-    ImGui::Begin("__", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDecoration);
+    ImGui::Begin("__", nullptr,
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
     int RenderWindowWidth = ImGui::GetWindowSize().x;
     int RenderWindowHeight = ImGui::GetWindowSize().y;
 
@@ -1268,6 +1271,54 @@ void gui::GUI()
 
     App->Controller.Locked = !ImGui::IsWindowFocused() || ImGuizmo::IsUsing() || ImGuizmo::IsOver();
     ImGui::End();
+
+    // Performance Profiler Window
+    if(App->ShowProfilerWindow)
+    {
+        ImGui::SetNextWindowPos(ImVec2(App->Window->Width - 320, 10), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
+
+        if(ImGui::Begin("Performance Profiler", &App->ShowProfilerWindow))
+        {
+            ImGui::Text("Frame Time: %.2f ms (%.1f FPS)",
+                App->GPUTimer.GetFrameTime(),
+                1000.0f / std::max(0.01f, App->GPUTimer.GetFrameTime()));
+            ImGui::Separator();
+
+            ImGui::Text("Render Passes:");
+            ImGui::Indent();
+
+            // Iterate through all timings dynamically
+            const auto& timings = App->GPUTimer.GetAllTimings();
+            float gpuTotal = 0.0f;
+
+            for (const auto& pair : timings)
+            {
+                const std::string& name = pair.first;
+                float time = pair.second;
+                gpuTotal += time;
+
+                // Color code: Green for OpenGL, Blue for CUDA
+                if (name == "Rasterize")
+                {
+                    ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "%s:", name.c_str());
+                }
+                else
+                {
+                    ImGui::TextColored(ImVec4(0.3f, 0.6f, 1.0f, 1.0f), "%s:", name.c_str());
+                }
+                ImGui::SameLine(120);
+                ImGui::Text("%.2f ms", time);
+            }
+
+            ImGui::Unindent();
+            ImGui::Separator();
+
+            ImGui::Text("GPU Total: %.2f ms", gpuTotal);
+            ImGui::Text("Frame Count: %d", App->GPUTimer.GetFrameCount());
+        }
+        ImGui::End();
+    }
 
 }
 }

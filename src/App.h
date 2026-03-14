@@ -4,6 +4,7 @@
 #include "CameraController.h"
 #include "Timer.h"
 #include "SVGF.h"
+#include "GPUTimer.h"
 
 // #define USE_OPTIX 1
 #if USE_OPTIX
@@ -116,7 +117,9 @@ private:
     float PhiColour = 10.0f;
     float PhiNormal = 128.0f;
 
-
+    // Performance profiling
+    GPUTimer GPUTimer;
+    bool ShowProfilerWindow = true;
 
     void Rasterize();
     void Trace();

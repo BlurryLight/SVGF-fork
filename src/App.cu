@@ -22,6 +22,7 @@
 #include "ImageLoader.h"
 #include "Framebuffer.h"
 #include "VertexBuffer.h"
+#include "ScopedGPUTimer.h"
 
 #include <ImGuizmo.h>
 #include <algorithm>
@@ -348,6 +349,10 @@ void application::Init()
 
     InitGpuObjects();
     CUDA_CHECK_ERROR(cudaGetLastError());
+
+    // Initialize GPU timer
+    GPUTimer.Init();
+
     Inited=true;
 }
 
@@ -379,6 +384,8 @@ void application::EndFrame()
 
 void application::Rasterize()
 {
+    GPU_OPENGL_TIMER_SCOPE(GPUTimer, "Rasterize");
+
     DebugRasterize = (SVGFDebugOutput==SVGFDebugOutputEnum::Normal ||  SVGFDebugOutput==SVGFDebugOutputEnum::Motion ||  SVGFDebugOutput==SVGFDebugOutputEnum::Position ||  SVGFDebugOutput==SVGFDebugOutputEnum::BarycentricCoords);
     Framebuffer[PingPongInx]->Bind();
     glViewport(0,0, RenderWidth, RenderHeight);
@@ -415,6 +422,8 @@ void application::Rasterize()
 }
 void application::Trace()
 {
+    GPU_CUDA_TIMER_SCOPE(GPUTimer, "Trace");
+
 #if !USE_OPTIX
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
@@ -476,6 +485,8 @@ void application::Trace()
 }
 void application::TemporalFilter()
 {
+    GPU_CUDA_TIMER_SCOPE(GPUTimer, "TemporalFilter");
+
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
     filter::TemporalFilter<<<gridSize, blockSize>>>((filter::half4*)RenderBuffer[1 - PingPongInx]->Data, (filter::half4*)RenderBuffer[PingPongInx]->Data, 
@@ -487,6 +498,8 @@ void application::TemporalFilter()
 
 void application::FilterMoments()
 {
+    GPU_CUDA_TIMER_SCOPE(GPUTimer, "FilterMoments");
+
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
     filter::FilterMoments<<<gridSize, blockSize>>>((filter::half4*)RenderBuffer[PingPongInx]->Data, (filter::half4*) FilterBuffer[0]->Data, (filter::half2*)MomentsBuffer[0]->Data,
@@ -498,6 +511,8 @@ void application::FilterMoments()
 
 void application::WaveletFilter()
 {
+    GPU_CUDA_TIMER_SCOPE(GPUTimer, "WaveletFilter");
+
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
     
@@ -523,6 +538,8 @@ void application::WaveletFilter()
 
 void application::TAA()
 {
+    GPU_CUDA_TIMER_SCOPE(GPUTimer, "TAA");
+
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
 
@@ -548,6 +565,13 @@ void application::Render()
 {
     Scene->CamerasBuffer->updateData(0 * sizeof(camera), Scene->Cameras.data(), Scene->Cameras.size() * sizeof(camera));
     TracingParamsBuffer->updateData(&Params, sizeof(tracingParameters));
+
+    GPUTimer.SetFrameTime(Timer.Stop());
+    // Start frame timing
+    Timer.Start();
+
+    // Update available timing results (async ping-pong readback)
+    GPUTimer.Update();
 
 #if 1
     if(SVGFDebugOutput == SVGFDebugOutputEnum::FinalOutput)
@@ -701,9 +725,15 @@ void application::Render()
 
     cudaMemcpyToArray(RenderTextureMapping->CudaTextureArray, 0, 0, RenderBuffer[0]->Data, RenderWidth * RenderHeight * sizeof(filter::half4), cudaMemcpyDeviceToDevice);
     CUDA_CHECK_ERROR(cudaGetLastError());
-    
-    OutputTexture = RenderTexture->TextureID;    
+
+    OutputTexture = RenderTexture->TextureID;
 #endif
+
+    // Calculate total frame time
+    GPUTimer.IncrementFrameCount();
+
+    // Advance ping-pong buffers for next frame
+    GPUTimer.AdvanceFrame();
 }
 
 void application::Run()
@@ -711,11 +741,6 @@ void application::Run()
     uint64_t Frame=0;
     while(!Window->ShouldClose())
     {
-        if(Frame % 10==0)
-        {
-            Timer.Start();
-        }
-
         Time += 0.001f;
 
         Window->PollEvents();
@@ -740,18 +765,13 @@ void application::Run()
         
 
         EndFrame();
-
-        if(Frame % 10==0)
-        {
-            double Time = Timer.Stop();
-            std::cout << "frame time " <<  Time << std::endl;
-        }
-        Frame++;
-    }  
+    }
 }
 
 void application::Cleanup()
 {
+    // Cleanup GPU timer
+    GPUTimer.Cleanup();
 }
 
 
@@ -801,7 +821,8 @@ void application::CalculateWindowSizes()
 {
     if(!Inited) return;
     if(Scene->Cameras.size() == 0) return;
-    
+    if (Window->Width == 0 || Window->Height == 0) return;
+
     CUDA_CHECK_ERROR(cudaGetLastError());
 
     // GUIWindow size
