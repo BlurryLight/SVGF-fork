@@ -19,7 +19,8 @@ public:
     void PollEvents() const;
     void Present();
     ~window();
-    uint32_t Width, Height;
-    GLFWwindow *Handle=nullptr;
+    uint32_t Width = 0;
+    uint32_t Height = 0;
+    GLFWwindow *Handle = nullptr;
 };
 }

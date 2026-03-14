@@ -125,44 +125,44 @@ struct kernelParams
 #endif
 struct ray
 {
-    vec3 Origin;
-    vec3 Direction;
-    vec3 InverseDirection;
+    vec3 Origin = vec3(0.0f);
+    vec3 Direction = vec3(0.0f);
+    vec3 InverseDirection = vec3(0.0f);
 };
 
 struct rayPayload
 {
-    uint32_t Distance;
-    uint32_t PrimitiveIndex;
-    uint32_t InstanceIndex;
-    uint32_t U;
-    uint32_t V;
-    uint32_t MaterialIndex;
+    uint32_t Distance = 0;
+    uint32_t PrimitiveIndex = 0;
+    uint32_t InstanceIndex = 0;
+    uint32_t U = 0;
+    uint32_t V = 0;
+    uint32_t MaterialIndex = 0;
 };
 
 
 struct randomState
 {
-    uint64_t State;
-    uint64_t Inc;
+    uint64_t State = 0;
+    uint64_t Inc = 0;
 };
 
 struct sceneIntersection
 {
-    float Distance;
-    float U;
-    float V;
-    
-    uint InstanceIndex;
-    uint PrimitiveIndex;
-    
-    mat4 InstanceTransform;
+    float Distance = 0.0f;
+    float U = 0.0f;
+    float V = 0.0f;
 
-    vec3 Normal;
-    randomState RandomState;
-    uint MaterialIndex;
-    vec3 Tangent;
-    vec3 Bitangent;
+    uint InstanceIndex = 0;
+    uint PrimitiveIndex = 0;
+
+    mat4 InstanceTransform = mat4(1.0f);
+
+    vec3 Normal = vec3(0.0f);
+    randomState RandomState = {};
+    uint MaterialIndex = 0;
+    vec3 Tangent = vec3(0.0f);
+    vec3 Bitangent = vec3(0.0f);
 };
 
 

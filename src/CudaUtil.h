@@ -23,9 +23,9 @@ namespace gpupt
 {
 struct cudaTextureMapping
 {
-    cudaArray* CudaTextureArray;
-    cudaGraphicsResource* CudaTextureResource;
-    cudaTextureObject_t TexObj;
+    cudaArray* CudaTextureArray = nullptr;
+    cudaGraphicsResource* CudaTextureResource = nullptr;
+    cudaTextureObject_t TexObj = 0;
     bool bMapped = false;
     bool bWriteOnly = false;
     bool bInitialized = false;

@@ -19,19 +19,19 @@ struct orbitCameraController
     float Phi = 0.0f;
     float Distance = 1.0f;
 
-    glm::vec3 Target = glm::vec3(0,0,0);
+    glm::vec3 Target = glm::vec3(0.0f, 0.0f, 0.0f);
 
     float MouseSpeedX = 1.0f;
     float MouseSpeedY = 1.0f;
     float MouseSpeedWheel = 1.0f;
 
-    glm::vec3 Position;
-    glm::vec3 Rotation;
+    glm::vec3 Position = glm::vec3(0.0f);
+    glm::vec3 Rotation = glm::vec3(0.0f);
 
-    glm::mat4 ModelMatrix;
-    glm::mat4 ViewMatrix;
+    glm::mat4 ModelMatrix = glm::mat4(1.0f);
+    glm::mat4 ViewMatrix = glm::mat4(1.0f);
 
-    glm::mat4 PrevViewMatrix;
+    glm::mat4 PrevViewMatrix = glm::mat4(1.0f);
 
     bool Locked = false;
 };

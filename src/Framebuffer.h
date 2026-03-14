@@ -12,10 +12,10 @@ struct cudaTextureMapping;
 
 struct framebufferDescriptor
 {
-    GLint InternalFormat;
-    GLenum Format;
-    GLenum Type;
-    uint32_t ElemSize;
+    GLint InternalFormat = 0;
+    GLenum Format = 0;
+    GLenum Type = 0;
+    uint32_t ElemSize = 0;
 };
 
 class framebuffer

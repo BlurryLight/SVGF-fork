@@ -40,7 +40,10 @@ enum class rasterizeOutputs
 
 struct cudaFramebuffer
 {
-    unsigned long long PositionTexture, NormalTexture, UVTexture, MotionTexture;
+    unsigned long long PositionTexture = 0;
+    unsigned long long NormalTexture = 0;
+    unsigned long long UVTexture = 0;
+    unsigned long long MotionTexture = 0;
 };
 
 class application
@@ -55,38 +58,38 @@ public:
 
     void OnResize(uint32_t NewWidth, uint32_t NewHeight);
 
-    
+
 #if USE_OPTIX
-    OptixDeviceContext OptixContext;
+    OptixDeviceContext OptixContext = nullptr;
     void CreateSBT();
-    OptixShaderBindingTable SBT;
-    OptixPipeline pipeline;
-    std::shared_ptr<buffer> KernelParamsBuffer;
+    OptixShaderBindingTable SBT = {};
+    OptixPipeline pipeline = nullptr;
+    std::shared_ptr<buffer> KernelParamsBuffer = nullptr;
 #endif
 private:
     friend class gui;
 
-    bool Inited=false;
+    bool Inited = false;
 
     static std::shared_ptr<application> Singleton;
-    std::shared_ptr<window> Window;
+    std::shared_ptr<window> Window = nullptr;
 
-    std::shared_ptr<scene> Scene;
+    std::shared_ptr<scene> Scene = nullptr;
     bool ResetRender = false;
 
     orbitCameraController Controller;
-    bool CameraMoved=false;
+    bool CameraMoved = false;
 
-    tracingParameters Params;
-    std::shared_ptr<gui> GUI;
+    tracingParameters Params = {};
+    std::shared_ptr<gui> GUI = nullptr;
 
-    
-    int32_t  RenderResolution;
-    uint32_t  RenderWidth;
-    uint32_t  RenderHeight;
-    uint32_t  RenderWindowWidth;
-    uint32_t  RenderWindowHeight;
-    float RenderAspectRatio = 1;
+
+    int32_t RenderResolution = 0;
+    uint32_t RenderWidth = 0;
+    uint32_t RenderHeight = 0;
+    uint32_t RenderWindowWidth = 0;
+    uint32_t RenderWindowHeight = 0;
+    float RenderAspectRatio = 1.0f;
 
     
     enum class SVGFDebugOutputEnum
@@ -123,28 +126,28 @@ private:
     void FilterMoments();
     void TAA();
 
-    float Time=0;
+    float Time = 0.0f;
 
 
-    std::shared_ptr<framebuffer> Framebuffer[2];
-    std::shared_ptr<shaderGL> GBufferShader;
+    std::shared_ptr<framebuffer> Framebuffer[2] = {nullptr, nullptr};
+    std::shared_ptr<shaderGL> GBufferShader = nullptr;
     // std::shared_ptr<textureGL> TonemapTexture;
 
 
     timer Timer;
 
-    std::shared_ptr<buffer> TracingParamsBuffer;
+    std::shared_ptr<buffer> TracingParamsBuffer = nullptr;
 
-    std::shared_ptr<buffer> RenderBuffer[2];
-    std::shared_ptr<buffer> MomentsBuffer[2];
-    std::shared_ptr<buffer> FilterBuffer[2];
-    std::shared_ptr<buffer> HistoryLengthBuffer;
-    // std::shared_ptr<buffer> TonemapBuffer;    
-    // std::shared_ptr<buffer> DenoisedBuffer;    
-    std::shared_ptr<textureGL> RenderTexture;
-    std::shared_ptr<cudaTextureMapping> RenderTextureMapping;
+    std::shared_ptr<buffer> RenderBuffer[2] = {nullptr, nullptr};
+    std::shared_ptr<buffer> MomentsBuffer[2] = {nullptr, nullptr};
+    std::shared_ptr<buffer> FilterBuffer[2] = {nullptr, nullptr};
+    std::shared_ptr<buffer> HistoryLengthBuffer = nullptr;
+    // std::shared_ptr<buffer> TonemapBuffer;
+    // std::shared_ptr<buffer> DenoisedBuffer;
+    std::shared_ptr<textureGL> RenderTexture = nullptr;
+    std::shared_ptr<cudaTextureMapping> RenderTextureMapping = nullptr;
 
-    uint32_t OutputTexture;
+    uint32_t OutputTexture = 0;
 
     
     int PingPongInx=0;

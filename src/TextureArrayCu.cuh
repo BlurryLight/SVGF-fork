@@ -19,10 +19,11 @@ public:
 
     int TotalWidth = 8192;
     int TotalHeight = 8192;
-    size_t Pitch;    
-    cudaArray* CuArray;
-    cudaTextureObject_t  TexObject;
-    int Width, Height;
+    size_t Pitch = 0;
+    cudaArray* CuArray = nullptr;
+    cudaTextureObject_t TexObject = 0;
+    int Width = 0;
+    int Height = 0;
 };
 
 }

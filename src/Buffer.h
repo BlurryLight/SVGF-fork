@@ -15,8 +15,8 @@ public:
     void updateData(size_t offset, const void* data, size_t dataSize);
     void Reallocate(const void* data, size_t dataSize);
 
-    void *Data;
-    uint32_t Size;
+    void *Data = nullptr;
+    uint32_t Size = 0;
 };
 
 class bufferGL {
@@ -28,7 +28,7 @@ public:
     void updateData(size_t offset, const void* data, size_t dataSize);
     void Reallocate(const void* data, size_t dataSize);
 
-    GLuint BufferID;  // Exposed for external compatibility
+    GLuint BufferID = 0;  // Exposed for external compatibility
 
 private:
     gl::BufferObject<gl::BufferType::kShaderStorageBuffer> buffer_;
@@ -42,7 +42,7 @@ public:
     ~uniformBufferGL();
     void Destroy();
     void updateData(const void* data, size_t dataSize);
-    GLuint BufferID;  // Exposed for external compatibility
+    GLuint BufferID = 0;  // Exposed for external compatibility
 
 private:
     gl::BufferObject<gl::BufferType::kUniformBuffer> buffer_;

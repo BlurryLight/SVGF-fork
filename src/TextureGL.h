@@ -28,8 +28,9 @@ public:
     ~textureGL();
     void Destroy();
     void Download(std::vector<uint8_t> &Output);
-    GLuint TextureID;
-    int Width, Height;
+    GLuint TextureID = 0;
+    int Width = 0;
+    int Height = 0;
 };
 
 }

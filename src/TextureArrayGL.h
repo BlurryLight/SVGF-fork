@@ -16,8 +16,8 @@ public:
     void Bind(int textureUnit = 0);
     void Unbind() const;
 
-    GLuint TextureID;  // Exposed for external compatibility
-    bool IsFloat=false;
+    GLuint TextureID = 0;  // Exposed for external compatibility
+    bool IsFloat = false;
 
 private:
     gl::Texture2DArray texture_;

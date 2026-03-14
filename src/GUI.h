@@ -13,7 +13,7 @@ class texture;
 class gui
 {
 public:
-    application *App;
+    application *App = nullptr;
     gui(application *app);
     void InstanceGUI(int InstanceInx);
     bool InstancesGUI();
@@ -47,9 +47,9 @@ public:
 
     std::string LoadedFile = "";
 
-    
-    ImGuizmo::OPERATION CurrentGizmoOperation = (ImGuizmo::TRANSLATE);
-    ImGuizmo::MODE CurrentGizmoMode = (ImGuizmo::WORLD);
+
+    ImGuizmo::OPERATION CurrentGizmoOperation = ImGuizmo::TRANSLATE;
+    ImGuizmo::MODE CurrentGizmoMode = ImGuizmo::WORLD;
 
     bool ShowOrientationGizmo = true;
     float OrientationGizmoSize = 110.0f;

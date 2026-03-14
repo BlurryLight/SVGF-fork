@@ -68,18 +68,18 @@ struct texture
 
 struct material
 {
-    glm::vec3 Emission = {};
-    float Roughness = 0;
-    
-    glm::vec3 Colour = {};
-    float Metallic = 0;
-    
-    float Padding;
-    float Anisotropy = 0.0f;
-    float MaterialType = 0;
-    float Opacity = 1;
+    glm::vec3 Emission = glm::vec3(0.0f);
+    float Roughness = 0.0f;
 
-    glm::vec3 ScatteringColour = {};
+    glm::vec3 Colour = glm::vec3(1.0f);
+    float Metallic = 0.0f;
+
+    float Padding = 0.0f;
+    float Anisotropy = 0.0f;
+    float MaterialType = 0.0f;
+    float Opacity = 1.0f;
+
+    glm::vec3 ScatteringColour = glm::vec3(1.0f);
     float TransmissionDepth = 0.01f;
 
     int EmissionTexture = InvalidID;
@@ -91,10 +91,10 @@ struct material
 
 struct aabb
 {
-    glm::vec3 Min =glm::vec3(1e30f);
-    float pad0;
-    glm::vec3 Max =glm::vec3(-1e30f);
-    float pad1;
+    glm::vec3 Min = glm::vec3(1e30f);
+    float pad0 = 0.0f;
+    glm::vec3 Max = glm::vec3(-1e30f);
+    float pad1 = 0.0f;
     float Area();
     void Grow(glm::vec3 Position);
     void Grow(aabb &AABB);
@@ -103,33 +103,33 @@ struct aabb
 
 struct instance
 {
-    glm::mat4 Transform;
-    glm::mat4 InverseTransform;
-    glm::mat4 NormalTransform;
-    aabb Bounds;
+    glm::mat4 Transform = glm::mat4(1.0f);
+    glm::mat4 InverseTransform = glm::mat4(1.0f);
+    glm::mat4 NormalTransform = glm::mat4(1.0f);
+    aabb Bounds = {};
 
-    uint32_t Shape;
-    uint32_t Index=0;
-    uint32_t Material;
-    uint32_t Selected=0;  
+    uint32_t Shape = 0;
+    uint32_t Index = 0;
+    uint32_t Material = 0;
+    uint32_t Selected = 0;
 };
 
 struct triangle
 {
-    glm::vec4 PositionUvX0;
-    glm::vec4 PositionUvX1;
-    glm::vec4 PositionUvX2;
-    
-    glm::vec4 NormalUvY0; 
-    glm::vec4 NormalUvY1; 
-    glm::vec4 NormalUvY2;
-    
-    glm::vec4 Tangent0;
-    glm::vec4 Tangent1;  
-    glm::vec4 Tangent2;
-    
-    glm::vec3 Centroid;
-    float padding3; 
+    glm::vec4 PositionUvX0 = glm::vec4(0.0f);
+    glm::vec4 PositionUvX1 = glm::vec4(0.0f);
+    glm::vec4 PositionUvX2 = glm::vec4(0.0f);
+
+    glm::vec4 NormalUvY0 = glm::vec4(0.0f);
+    glm::vec4 NormalUvY1 = glm::vec4(0.0f);
+    glm::vec4 NormalUvY2 = glm::vec4(0.0f);
+
+    glm::vec4 Tangent0 = glm::vec4(0.0f);
+    glm::vec4 Tangent1 = glm::vec4(0.0f);
+    glm::vec4 Tangent2 = glm::vec4(0.0f);
+
+    glm::vec3 Centroid = glm::vec3(0.0f);
+    float padding3 = 0.0f;
 };
 
 struct shape
@@ -143,7 +143,7 @@ struct shape
 
     std::vector<triangle> Triangles;
 
-    glm::vec3 Centroid;
+    glm::vec3 Centroid = glm::vec3(0.0f);
 
     std::shared_ptr<blas> BVH;
 
@@ -160,12 +160,12 @@ struct shape
 
 struct environment
 {
-    glm::mat4 Transform;
+    glm::mat4 Transform = glm::mat4(1.0f);
 
-    glm::vec3 Emission;
-    float pad0;
+    glm::vec3 Emission = glm::vec3(0.0f);
+    float pad0 = 0.0f;
 
-    glm::ivec3 pad1;
+    glm::ivec3 pad1 = glm::ivec3(0);
     int EmissionTexture = InvalidID;
 };
 
