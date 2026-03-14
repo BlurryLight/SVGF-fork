@@ -101,10 +101,6 @@ add_subdirectory(submodules/glfw)
 # Glad
 set(GLAD_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/submodules/glad/src/glad.c)
 
-# # OIDN
-SET(OIDN_DEVICE_CPU OFF)
-SET(OIDN_DEVICE_CUDA OFF)
-# add_subdirectory(submodules/oidn)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CUDA_ARCHITECTURES "75")

@@ -22,9 +22,6 @@
 [submodule "submodules/assimp"]
 	path = submodules/assimp
 	url = https://github.com/assimp/assimp.git
-[submodule "submodules/oidn"]
-	path = submodules/oidn
-	url = https://github.com/OpenImageDenoise/oidn.git
 [submodule "submodules/oglwrap"]
 	path = submodules/oglwrap
 	url = git@github.com:Tomius/oglwrap.git
