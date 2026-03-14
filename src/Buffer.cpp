@@ -43,12 +43,14 @@ void buffer::updateData(size_t offset, const void* data, size_t DataSize) {
 
 
 bufferGL::bufferGL(size_t DataSize, const void* InitData) {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, InitData, gl::BufferUsage::kDynamicCopy);
     BufferID = buffer_.expose();
 }
 
 void bufferGL::Reallocate(const void* InitData, size_t DataSize)
 {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, InitData, gl::BufferUsage::kDynamicCopy);
 }
 
@@ -64,10 +66,12 @@ void bufferGL::Destroy()
 }
 
 void bufferGL::updateData(const void* data, size_t DataSize) {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.subData(0, DataSize, static_cast<const uint8_t*>(data));
 }
 
 void bufferGL::updateData(size_t offset, const void* data, size_t DataSize) {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.subData(offset, DataSize, static_cast<const uint8_t*>(data));
 }
 
@@ -76,6 +80,7 @@ void bufferGL::updateData(size_t offset, const void* data, size_t DataSize) {
 // 
 
 uniformBufferGL::uniformBufferGL(size_t DataSize, const void* data) {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, data, gl::BufferUsage::kDynamicDraw);
     BufferID = buffer_.expose();
     // Bind to uniform buffer point 8 (as in original implementation)
@@ -94,6 +99,7 @@ void uniformBufferGL::Destroy()
 }
 
 void uniformBufferGL::updateData(const void* data, size_t DataSize) {
+    auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, data, gl::BufferUsage::kDynamicDraw);
 }
 

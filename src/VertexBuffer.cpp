@@ -71,7 +71,9 @@ vertexBuffer::vertexBuffer(scene *Scene)
     Count = Indices.size();
 
     // Setup VAO using oglwrap
-    gl::Bind(vao_);
+    auto scope_vao = gl::MakeTemporaryBind(vao_);
+    auto scope_vbo = gl::MakeTemporaryBind(vbo_);
+    auto scope_ebo = gl::MakeTemporaryBind(ebo_);
 
     // Setup VBO using oglwrap
     vbo_.data(Vertices, gl::BufferUsage::kStaticDraw);
@@ -101,17 +103,17 @@ vertexBuffer::vertexBuffer(scene *Scene)
     VBO = vbo_.expose();
     EBO = ebo_.expose();
 
-    gl::Unbind(vao_);
 }
 
 void vertexBuffer::Draw(uint32_t ShapeIndex)
 {
-    gl::Bind(vao_);
+    auto scope_vao = gl::MakeTemporaryBind(vao_);
+    auto scope_ebo = gl::MakeTemporaryBind(ebo_);
+    auto scope_vbo = gl::MakeTemporaryBind(vbo_);
 
     uint32_t Count = Offsets[ShapeIndex+1] - Offsets[ShapeIndex];
     glDrawElements(GL_TRIANGLES, Count, GL_UNSIGNED_INT, (void*)(Offsets[ShapeIndex] * sizeof(uint32_t)));
 
-    gl::Unbind(vao_);
 }
 
 vertexBuffer::~vertexBuffer()

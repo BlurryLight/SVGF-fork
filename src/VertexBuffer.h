@@ -29,9 +29,9 @@ public:
 
     std::vector<uint32_t> Offsets;
 
-    GLuint VAO;  // Exposed for external compatibility
-    GLuint VBO;  // Exposed for external compatibility
-    GLuint EBO;  // Exposed for external compatibility
+    GLuint VAO = GL_INVALID_VALUE;  // Exposed for external compatibility
+    GLuint VBO = GL_INVALID_VALUE;  // Exposed for external compatibility
+    GLuint EBO = GL_INVALID_VALUE;  // Exposed for external compatibility
 
     uint32_t Count=0;
 
