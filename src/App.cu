@@ -353,6 +353,29 @@ void application::Init()
     // Initialize GPU timer
     GPUTimer.Init();
 
+    // Initialize fullscreen quad for unpack rendering
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    glGenVertexArrays(1, &FullscreenQuadVAO);
+    glGenBuffers(1, &FullscreenQuadVBO);
+    glBindVertexArray(FullscreenQuadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, FullscreenQuadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
+
     Inited=true;
 }
 
@@ -386,7 +409,9 @@ void application::Rasterize()
 {
     GPU_OPENGL_TIMER_SCOPE(GPUTimer, "Rasterize");
 
-    DebugRasterize = (SVGFDebugOutput==SVGFDebugOutputEnum::Normal ||  SVGFDebugOutput==SVGFDebugOutputEnum::Motion ||  SVGFDebugOutput==SVGFDebugOutputEnum::Position ||  SVGFDebugOutput==SVGFDebugOutputEnum::BarycentricCoords);
+    DebugRasterize = (SVGFDebugOutput == SVGFDebugOutputEnum::Normal || SVGFDebugOutput == SVGFDebugOutputEnum::Motion
+        || SVGFDebugOutput == SVGFDebugOutputEnum::Position || SVGFDebugOutput ==
+        SVGFDebugOutputEnum::BarycentricCoords || SVGFDebugOutput == SVGFDebugOutputEnum::Depth);
     Framebuffer[PingPongInx]->Bind();
     glViewport(0,0, RenderWidth, RenderHeight);
     glClearColor(0, 0, 0, 1);
@@ -549,9 +574,92 @@ void application::TAA()
 void application::Tonemap()
 {
     dim3 blockSize(16, 16);
-    dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
-    
+    dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);
 
+
+}
+
+void application::UnpackGBufferForDisplay()
+{
+    // Only unpack when displaying integer format G-buffer channels
+    if (SVGFDebugOutput != SVGFDebugOutputEnum::Normal &&
+        SVGFDebugOutput != SVGFDebugOutputEnum::BarycentricCoords &&
+        SVGFDebugOutput != SVGFDebugOutputEnum::Position &&
+        SVGFDebugOutput != SVGFDebugOutputEnum::Motion &&
+        SVGFDebugOutput != SVGFDebugOutputEnum::Depth) {
+        return;
+    }
+
+    // Create temporary framebuffer for rendering unpacked result
+
+
+    GLuint tempFBO;
+    glGenFramebuffers(1, &tempFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, tempFBO);
+
+    // Attach unpack output texture
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GBufferUnpackOutputTexture->TextureID, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &tempFBO);
+        return;
+    }
+
+    glViewport(0, 0, RenderWidth, RenderHeight);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+
+    GBufferUnpackShader->Use();
+
+
+    int channelIndex = 0;
+    switch (SVGFDebugOutput) {
+        case SVGFDebugOutputEnum::Position:
+            channelIndex = 0;
+            // Bind float texture
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, Framebuffer[PingPongInx]->GetTexture((int)rasterizeOutputs::Position));
+            GBufferUnpackShader->SetInt("InputTexture", 0);
+            break;
+        case SVGFDebugOutputEnum::Normal:
+            channelIndex = 1;
+            // Bind uint texture
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, Framebuffer[PingPongInx]->GetTexture((int)rasterizeOutputs::Normal));
+            GBufferUnpackShader->SetInt("InputTextureUInt", 1);
+            break;
+        case SVGFDebugOutputEnum::BarycentricCoords:
+            channelIndex = 2;
+            // Bind uint texture
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, Framebuffer[PingPongInx]->GetTexture((int)rasterizeOutputs::UV));
+            GBufferUnpackShader->SetInt("InputTextureUInt", 1);
+            break;
+        case SVGFDebugOutputEnum::Motion:
+        case SVGFDebugOutputEnum::Depth:
+            channelIndex = SVGFDebugOutput == SVGFDebugOutputEnum::Motion ? 3 : 4;
+            // Bind float texture
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, Framebuffer[PingPongInx]->GetTexture((int)rasterizeOutputs::Motion));
+            GBufferUnpackShader->SetInt("InputTexture", 0);
+            break;
+    }
+
+    GBufferUnpackShader->SetInt("ChannelIndex", channelIndex);
+
+    // Render fullscreen quad
+    glBindVertexArray(FullscreenQuadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    // Cleanup
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &tempFBO);
+
+    // Update output texture to unpacked result
+    OutputTexture = GBufferUnpackOutputTexture->TextureID;
 }
 
 void application::SaveRender(std::string ImagePath)
@@ -772,6 +880,16 @@ void application::Cleanup()
 {
     // Cleanup GPU timer
     GPUTimer.Cleanup();
+
+    // Cleanup fullscreen quad
+    if (FullscreenQuadVAO) {
+        glDeleteVertexArrays(1, &FullscreenQuadVAO);
+        FullscreenQuadVAO = 0;
+    }
+    if (FullscreenQuadVBO) {
+        glDeleteBuffers(1, &FullscreenQuadVBO);
+        FullscreenQuadVBO = 0;
+    }
 }
 
 
@@ -791,7 +909,11 @@ void application::ResizeRenderTextures()
     Framebuffer[1] = std::make_shared<framebuffer>(RenderWidth, RenderHeight, Desc);
     GBufferShader = std::make_shared<shaderGL>("resources/shaders/GBuffer.vert", "resources/shaders/GBuffer.frag");
 
-    
+    // Initialize GBuffer unpack shader and output texture
+    GBufferUnpackShader = std::make_shared<shaderGL>("resources/shaders/GBufferUnpack.vert", "resources/shaders/GBufferUnpack.frag");
+    GBufferUnpackOutputTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8);
+
+
     cudaDeviceSynchronize();
     // TODO: Make that uint8
     // TonemapTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8);

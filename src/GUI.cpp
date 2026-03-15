@@ -1164,6 +1164,9 @@ void gui::GUI()
     int RenderWindowWidth = ImGui::GetWindowSize().x;
     int RenderWindowHeight = ImGui::GetWindowSize().y;
 
+    // Unpack GBuffer data for display if needed (for integer format textures)
+    App->UnpackGBufferForDisplay();
+
     ImGui::Image((ImTextureID)App->OutputTexture, ImVec2(RenderWindowWidth, RenderWindowHeight),ImVec2(0, 1), ImVec2(1, 0));
     // ImGui::Image((ImTextureID)App->Framebuffer[0]->GetTexture(1), ImVec2(RenderWindowWidth, RenderWindowHeight), ImVec2(0, 1), ImVec2(1, 0));
 

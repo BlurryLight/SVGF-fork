@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <glad/gl.h>
 #include "Tracing.h"
 #include "CameraController.h"
 #include "Timer.h"
@@ -134,6 +135,8 @@ private:
 
     std::shared_ptr<framebuffer> Framebuffer[2] = {nullptr, nullptr};
     std::shared_ptr<shaderGL> GBufferShader = nullptr;
+    std::shared_ptr<shaderGL> GBufferUnpackShader = nullptr;
+    std::shared_ptr<textureGL> GBufferUnpackOutputTexture = nullptr;
     // std::shared_ptr<textureGL> TonemapTexture;
 
 
@@ -164,6 +167,11 @@ private:
     void CalculateWindowSizes();
     void StartFrame();
     void EndFrame();
+    void UnpackGBufferForDisplay();
+
+    // Fullscreen quad for unpack rendering
+    GLuint FullscreenQuadVAO = 0;
+    GLuint FullscreenQuadVBO = 0;
 };
 
 }

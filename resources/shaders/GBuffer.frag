@@ -70,7 +70,7 @@ void main()
     float Depth = distance(CameraPosition, OutPosition.xyz);
     float DepthDerivative = max(abs(dFdx(Depth)), abs(dFdy(Depth)));
 
-    OutMotionVectors = vec4(MotionVector, 0, 1);
+    OutMotionVectors = vec4(MotionVector, Depth, 1);
 
     if(Debug==0)
     {
