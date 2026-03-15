@@ -1,4 +1,5 @@
 ﻿#include "GPUTimer.h"
+#include "DebugLabel.h"
 #include <iostream>
 
 namespace gpupt
@@ -54,6 +55,14 @@ void GPUTimer::StartOpenGL(const std::string& name)
         // Create new timing data
         OpenGLTimingData data = {};
         glGenQueries(PING_PONG_BUFFERS, data.Queries);
+
+        // Set debug labels for queries
+        for (int i = 0; i < PING_PONG_BUFFERS; i++)
+        {
+            std::string queryName = DebugLabel::FormatName(name, "Query" + std::to_string(i));
+            DebugLabel::SetQuery(data.Queries[i], queryName);
+        }
+
         OpenGLTimings[name] = data;
     }
 

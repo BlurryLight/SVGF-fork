@@ -1,4 +1,5 @@
 #include "TextureArrayGL.h"
+#include "DebugLabel.h"
 #include <oglwrap/context/binding.h>
 
 namespace gpupt
@@ -9,8 +10,9 @@ namespace gpupt
         // oglwrap handles automatic cleanup via RAII
     }
 
-    void textureArrayGL::CreateTextureArray(int Width, int Height, int Layers, bool _IsFloat) {
+    void textureArrayGL::CreateTextureArray(int Width, int Height, int Layers, bool _IsFloat, const std::string& name) {
         this->IsFloat = _IsFloat;
+        this->Name = name;
 
         gl::Bind(texture_);
 
@@ -43,6 +45,16 @@ namespace gpupt
 
         // Expose the OpenGL ID for external compatibility
         TextureID = texture_.expose();
+
+        // Set debug label for RenderDoc/NSight
+        if (!Name.empty())
+        {
+            DebugLabel::SetTexture(TextureID, Name);
+        }
+        else
+        {
+            DebugLabel::SetTexture(TextureID, "TextureArrayGL");
+        }
     }
 
     void textureArrayGL::LoadTextureLayer(int layerIndex, const std::vector<uint8_t>& imageData, int Width, int Height) {

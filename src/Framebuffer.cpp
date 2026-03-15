@@ -1,11 +1,12 @@
 #include "Framebuffer.h"
 #include "CudaUtil.h"
+#include "DebugLabel.h"
 #include <oglwrap/context/binding.h>
 
 namespace gpupt
 {
 
-framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescriptor> &Descriptors)
+framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescriptor> &Descriptors, const std::string& name) : Name(name)
 {
     m_Width = Width;
     m_Height = Height;
@@ -15,6 +16,16 @@ framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescripto
 
     // Bind the framebuffer using oglwrap
     gl::Bind(fbo_);
+
+    // Set debug label for framebuffer
+    if (!Name.empty())
+    {
+        DebugLabel::SetFramebuffer(fbo_.expose(), Name);
+    }
+    else
+    {
+        DebugLabel::SetFramebuffer(fbo_.expose(), "Framebuffer");
+    }
 
     std::vector<gl::FramebufferAttachment> Attachments(Descriptors.size());
 
@@ -36,6 +47,18 @@ framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescripto
         fbo_.attachTexture(static_cast<gl::FramebufferAttachment>(GL_COLOR_ATTACHMENT0 + i), colorTextures_[i]);
 
         Attachments[i] = static_cast<gl::FramebufferAttachment>(GL_COLOR_ATTACHMENT0 + i);
+
+        // Set debug label for color texture
+        std::string textureName;
+        if (!Name.empty())
+        {
+            textureName = DebugLabel::FormatName(Name, "Color" + Descriptors[i].DebugName);
+        }
+        else
+        {
+            textureName = DebugLabel::FormatName("Framebuffer", "Color" + Descriptors[i].DebugName);
+        }
+        DebugLabel::SetTexture(colorTextures_[i].expose(), textureName);
     }
 
     // Set draw buffers
@@ -53,6 +76,18 @@ framebuffer::framebuffer(int Width, int Height, std::vector<framebufferDescripto
     depthTexture_.minFilter(gl::MinFilter::kNearest);
     depthTexture_.magFilter(gl::MagFilter::kNearest);
     fbo_.attachTexture(gl::FramebufferAttachment::kDepthAttachment, depthTexture_);
+
+    // Set debug label for depth texture
+    std::string depthName;
+    if (!Name.empty())
+    {
+        depthName = DebugLabel::FormatName(Name, "Depth");
+    }
+    else
+    {
+        depthName = DebugLabel::FormatName("Framebuffer", "Depth");
+    }
+    DebugLabel::SetTexture(depthTexture_.expose(), depthName);
 
     // Validate framebuffer
     if(fbo_.status() != gl::FramebufferStatus::kFramebufferComplete) {

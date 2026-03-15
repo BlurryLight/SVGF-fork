@@ -1,11 +1,12 @@
 #include "VertexBuffer.h"
 #include "Scene.h"
+#include "DebugLabel.h"
 #include <oglwrap/vertex_attrib.h>
 #include <oglwrap/context/binding.h>
 
 namespace gpupt
 {
-vertexBuffer::vertexBuffer(scene *Scene)
+vertexBuffer::vertexBuffer(scene *Scene, const std::string& name) : Name(name)
 {
     Offsets.resize(Scene->Shapes.size() + 1);
 
@@ -102,6 +103,12 @@ vertexBuffer::vertexBuffer(scene *Scene)
     VAO = vao_.expose();
     VBO = vbo_.expose();
     EBO = ebo_.expose();
+
+    // Set debug labels for RenderDoc/NSight
+    std::string baseName = Name.empty() ? "VertexBuffer" : Name;
+    DebugLabel::SetVertexArray(VAO, baseName + "_VAO");
+    DebugLabel::SetBuffer(VBO, baseName + "_VBO");
+    DebugLabel::SetBuffer(EBO, baseName + "_EBO");
 
 }
 

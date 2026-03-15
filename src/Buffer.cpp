@@ -1,5 +1,6 @@
 #include "buffer.h"
 #include "oglwrap/buffer-inl.h"
+#include "DebugLabel.h"
 
 #include <cuda_runtime.h>
 #include <cuda_texture_types.h>
@@ -8,10 +9,11 @@
 namespace gpupt
 {
 
-buffer::buffer(size_t DataSize, const void* InitData) {
+buffer::buffer(size_t DataSize, const void* InitData, const std::string& name) {
     this->Size = DataSize;
     cudaMalloc((void**)&this->Data, Size);
     if(InitData != nullptr) cudaMemcpy(this->Data, InitData, Size, cudaMemcpyHostToDevice);
+    this->Name = name;
 }
 
 void buffer::Reallocate(const void* InitData, size_t DataSize)
@@ -42,10 +44,20 @@ void buffer::updateData(size_t offset, const void* data, size_t DataSize) {
 // 
 
 
-bufferGL::bufferGL(size_t DataSize, const void* InitData) {
+bufferGL::bufferGL(size_t DataSize, const void* InitData, const std::string& name) : Name(name) {
     auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, InitData, gl::BufferUsage::kDynamicCopy);
     BufferID = buffer_.expose();
+
+    // Set debug label for RenderDoc/NSight
+    if (!Name.empty())
+    {
+        DebugLabel::SetBuffer(BufferID, Name);
+    }
+    else
+    {
+        DebugLabel::SetBuffer(BufferID, "BufferGL");
+    }
 }
 
 void bufferGL::Reallocate(const void* InitData, size_t DataSize)
@@ -79,12 +91,22 @@ void bufferGL::updateData(size_t offset, const void* data, size_t DataSize) {
 
 // 
 
-uniformBufferGL::uniformBufferGL(size_t DataSize, const void* data) {
+uniformBufferGL::uniformBufferGL(size_t DataSize, const void* data, const std::string& name) : Name(name) {
     auto scope_bo = gl::MakeTemporaryBind(buffer_);
     buffer_.data(DataSize, data, gl::BufferUsage::kDynamicDraw);
     BufferID = buffer_.expose();
     // Bind to uniform buffer point 8 (as in original implementation)
     glBindBufferBase(GL_UNIFORM_BUFFER, 8, BufferID);
+
+    // Set debug label for RenderDoc/NSight
+    if (!Name.empty())
+    {
+        DebugLabel::SetBuffer(BufferID, Name);
+    }
+    else
+    {
+        DebugLabel::SetBuffer(BufferID, "UniformBufferGL");
+    }
 }
 
 uniformBufferGL::~uniformBufferGL() {

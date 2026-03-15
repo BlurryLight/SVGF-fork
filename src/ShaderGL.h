@@ -17,8 +17,8 @@ class textureArrayGL;
 class shaderGL {
 public:
     shaderGL() = default;
-    shaderGL(const char* computePath);
-    shaderGL(const char* VertexPath, const char *FragmentPath);
+    shaderGL(const char* computePath, const std::string& name = "");
+    shaderGL(const char* VertexPath, const char *FragmentPath, const std::string& name = "");
     void Destroy();
     void Use();
     void SetInt(const std::string& name, int value);
@@ -34,6 +34,7 @@ public:
     ~shaderGL();
 private:
     gl::Program program_;  // oglwrap program object
+    std::string Name;
     std::string ReadFile(const char* FilePath) const;
     void CompileShader(gl::ShaderType Type, const char* SourceCode) const;
 };

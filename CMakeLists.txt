@@ -165,6 +165,7 @@ set (sourceFiles
         src/ShaderGL.cpp
         src/TextureGL.cpp
         src/Buffer.cpp
+        src/DebugLabel.cpp
         src/CameraController.cpp
         src/GLTFLoader.cpp
         src/AssimpLoader.cpp

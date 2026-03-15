@@ -1,4 +1,5 @@
 #include "ShaderGL.h"
+#include "DebugLabel.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -9,31 +10,48 @@
 
 namespace gpupt
 {
-shaderGL::shaderGL(const char* computePath) {
+shaderGL::shaderGL(const char* computePath, const std::string& name) : Name(name) {
     std::string shaderCode = ReadFile(computePath);
 
     gl::Shader shader(gl::ShaderType::kComputeShader);
     shader.set_source(shaderCode);
     shader.compile();
+    // Set debug label for shader
+    std::string shaderName = Name.empty() ? "ComputeShader" : Name + "_Shader";
+    DebugLabel::SetShader(shader.expose(), shaderName);
 
     program_.attachShader(shader);
     program_.link();
+
+    // Set debug label for program
+    std::string programName = Name.empty() ? "ComputeProgram" : Name;
+    DebugLabel::SetProgram(program_.expose(), programName);
 }
 
-shaderGL::shaderGL(const char* VertexPath, const char *FragmentPath) {
+shaderGL::shaderGL(const char* VertexPath, const char *FragmentPath, const std::string& name) : Name(name) {
     std::string vShaderCode = ReadFile(VertexPath);
     std::string fShaderCode = ReadFile(FragmentPath);
 
     gl::Shader vertexShader(gl::ShaderType::kVertexShader);
     vertexShader.set_source(vShaderCode);
     vertexShader.compile();
+    // Set debug label for vertex shader
+    std::string vertexName = Name.empty() ? "VertexShader" : Name + "_Vertex";
+    DebugLabel::SetShader(vertexShader.expose(), vertexName);
 
     gl::Shader fragmentShader(gl::ShaderType::kFragmentShader);
     fragmentShader.set_source(fShaderCode);
     fragmentShader.compile();
+    // Set debug label for fragment shader
+    std::string fragName = Name.empty() ? "FragmentShader" : Name + "_Fragment";
+    DebugLabel::SetShader(fragmentShader.expose(), fragName);
 
     program_.attachShaders(vertexShader, fragmentShader);
     program_.link();
+
+    // Set debug label for program
+    std::string programName = Name.empty() ? "ShaderProgram" : Name;
+    DebugLabel::SetProgram(program_.expose(), programName);
 }
 
 shaderGL::~shaderGL()

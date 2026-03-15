@@ -1,4 +1,5 @@
 #include "TextureGL.h"
+#include "DebugLabel.h"
 #include <stdexcept>
 
 #include "assert.h"
@@ -99,7 +100,7 @@ GLenum GetType(textureGL::types Type)
 
 
 
-textureGL::textureGL(int Width, int Height, channels Channel, types Type) : Width(Width), Height(Height) {
+textureGL::textureGL(int Width, int Height, channels Channel, types Type, const std::string& name) : Width(Width), Height(Height), Name(name) {
     // Generate texture ID and bind it
     glGenTextures(1, &TextureID);
     glBindTexture(GL_TEXTURE_2D, TextureID);
@@ -110,13 +111,23 @@ textureGL::textureGL(int Width, int Height, channels Channel, types Type) : Widt
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    
+
     GLint InternalFormat = GetInternalFormat(Channel, Type);
     GLenum Format = GetFormat(Channel, Type);
     GLenum GLType = GetType(Type);
 
     glTexImage2D(GL_TEXTURE_2D, 0, InternalFormat, Width, Height, 0, Format, GLType, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Set debug label for RenderDoc/NSight
+    if (!Name.empty())
+    {
+        DebugLabel::SetTexture(TextureID, Name);
+    }
+    else
+    {
+        DebugLabel::SetTexture(TextureID, "TextureGL");
+    }
 }
 
 void textureGL::Download(std::vector<uint8_t> &Output) {

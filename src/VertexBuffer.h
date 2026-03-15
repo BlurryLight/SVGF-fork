@@ -3,6 +3,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <vector>
+#include <string>
 #include <oglwrap/vertex_array.h>
 #include <oglwrap/buffer.h>
 
@@ -22,7 +23,7 @@ struct vertex
 struct vertexBuffer
 {
 public:
-    vertexBuffer(scene *Scene);
+    vertexBuffer(scene *Scene, const std::string& name = "");
     ~vertexBuffer();
 
     void Draw(uint32_t ShapeIndex);
@@ -39,6 +40,7 @@ private:
     gl::VertexArray vao_;
     gl::ArrayBuffer vbo_;
     gl::IndexBuffer ebo_;
+    std::string Name;
 };
 
 }

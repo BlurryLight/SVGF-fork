@@ -23,6 +23,7 @@
 #include "Framebuffer.h"
 #include "VertexBuffer.h"
 #include "ScopedGPUTimer.h"
+#include "DebugLabel.h"
 
 #include <ImGuizmo.h>
 #include <algorithm>
@@ -143,7 +144,7 @@ void application::InitImGui()
 
 void application::InitGpuObjects()
 {
-    TracingParamsBuffer = std::make_shared<buffer>(sizeof(tracingParameters), &Params);
+    TracingParamsBuffer = std::make_shared<buffer>(sizeof(tracingParameters), &Params, "TracingParamsBuffer");
 }
 
 #if USE_OPTIX
@@ -376,6 +377,10 @@ void application::Init()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0);
 
+    // Set debug labels for fullscreen quad
+    glObjectLabel(GL_VERTEX_ARRAY, FullscreenQuadVAO, -1, "FullscreenQuadVAO");
+    glObjectLabel(GL_BUFFER, FullscreenQuadVBO, -1, "FullscreenQuadVBO");
+
     Inited=true;
 }
 
@@ -393,8 +398,11 @@ void application::StartFrame()
 
 void application::EndFrame()
 {
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    {
+        GPU_OPENGL_DEBUG_GROUP("ImGui_Render");
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
     Window->Present();
 
     if(Scene->Cameras.size()>0)
@@ -407,6 +415,7 @@ void application::EndFrame()
 
 void application::Rasterize()
 {
+    GPU_OPENGL_DEBUG_GROUP("Rasterize");
     GPU_OPENGL_TIMER_SCOPE(GPUTimer, "Rasterize");
 
     DebugRasterize = (SVGFDebugOutput == SVGFDebugOutputEnum::Normal || SVGFDebugOutput == SVGFDebugOutputEnum::Motion
@@ -447,6 +456,7 @@ void application::Rasterize()
 }
 void application::Trace()
 {
+    GPU_OPENGL_DEBUG_GROUP("Trace_CUDA");
     GPU_CUDA_TIMER_SCOPE(GPUTimer, "Trace");
 
 #if !USE_OPTIX
@@ -510,6 +520,7 @@ void application::Trace()
 }
 void application::TemporalFilter()
 {
+    GPU_OPENGL_DEBUG_GROUP("TemporalFilter");
     GPU_CUDA_TIMER_SCOPE(GPUTimer, "TemporalFilter");
 
     dim3 blockSize(16, 16);
@@ -523,6 +534,7 @@ void application::TemporalFilter()
 
 void application::FilterMoments()
 {
+    GPU_OPENGL_DEBUG_GROUP("FilterMoments");
     GPU_CUDA_TIMER_SCOPE(GPUTimer, "FilterMoments");
 
     dim3 blockSize(16, 16);
@@ -536,14 +548,16 @@ void application::FilterMoments()
 
 void application::WaveletFilter()
 {
+    GPU_OPENGL_DEBUG_GROUP("WaveletFilter");
     GPU_CUDA_TIMER_SCOPE(GPUTimer, "WaveletFilter");
 
     dim3 blockSize(16, 16);
-    dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);    
-    
+    dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);
+
     int PingPong=0;
     for(int i=0; i<SpatialFilterSteps; i++)
     {
+        GPU_OPENGL_DEBUG_GROUP_MSG("Wavelet_Iteration", "Iteration " + std::to_string(i));
         filter::half4 *Input = (filter::half4 *)FilterBuffer[PingPong]->Data;
         filter::half4 *Output = (filter::half4 *)FilterBuffer[1 - PingPong]->Data;
 
@@ -563,6 +577,7 @@ void application::WaveletFilter()
 
 void application::TAA()
 {
+    GPU_OPENGL_DEBUG_GROUP("TAA");
     GPU_CUDA_TIMER_SCOPE(GPUTimer, "TAA");
 
     dim3 blockSize(16, 16);
@@ -573,6 +588,7 @@ void application::TAA()
 
 void application::Tonemap()
 {
+    GPU_OPENGL_DEBUG_GROUP("Tonemap");
     dim3 blockSize(16, 16);
     dim3 gridSize((RenderWidth / blockSize.x)+1, (RenderHeight / blockSize.y) + 1);
 
@@ -589,6 +605,8 @@ void application::UnpackGBufferForDisplay()
         SVGFDebugOutput != SVGFDebugOutputEnum::Depth) {
         return;
     }
+
+    GPU_OPENGL_DEBUG_GROUP("UnpackGBufferForDisplay");
 
     // Create temporary framebuffer for rendering unpacked result
 
@@ -898,41 +916,41 @@ void application::ResizeRenderTextures()
 {
     if(!Inited) return;
 
-    std::vector<framebufferDescriptor> Desc = 
+    std::vector<framebufferDescriptor> Desc =
     {
-        {GL_RGBA32F, GL_RGBA, GL_FLOAT, sizeof(glm::vec4)}, //Position
-        {GL_RGBA16UI, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, 4 * sizeof(uint16_t)}, //Normal
-        {GL_RGBA16UI, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, 4 * sizeof(uint16_t)}, //Barycentric coordinates
-        {GL_RGBA32F, GL_RGBA, GL_FLOAT, sizeof(glm::vec4)}, //Motion Vectors and depth
+        {GL_RGBA32F, GL_RGBA, GL_FLOAT, sizeof(glm::vec4), "Position"}, //Position
+        {GL_RGBA16UI, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, 4 * sizeof(uint16_t), "Normal"}, //Normal
+        {GL_RGBA16UI, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, 4 * sizeof(uint16_t), "BaryCoords"}, //Barycentric coordinates
+        {GL_RGBA32F, GL_RGBA, GL_FLOAT, sizeof(glm::vec4), "Motion_Depth"}, //Motion Vectors and depth
     };
-    Framebuffer[0] = std::make_shared<framebuffer>(RenderWidth, RenderHeight, Desc);
-    Framebuffer[1] = std::make_shared<framebuffer>(RenderWidth, RenderHeight, Desc);
-    GBufferShader = std::make_shared<shaderGL>("resources/shaders/GBuffer.vert", "resources/shaders/GBuffer.frag");
+    Framebuffer[0] = std::make_shared<framebuffer>(RenderWidth, RenderHeight, Desc, "GBuffer_0");
+    Framebuffer[1] = std::make_shared<framebuffer>(RenderWidth, RenderHeight, Desc, "GBuffer_1");
+    GBufferShader = std::make_shared<shaderGL>("resources/shaders/GBuffer.vert", "resources/shaders/GBuffer.frag", "GBufferShader");
 
     // Initialize GBuffer unpack shader and output texture
-    GBufferUnpackShader = std::make_shared<shaderGL>("resources/shaders/GBufferUnpack.vert", "resources/shaders/GBufferUnpack.frag");
-    GBufferUnpackOutputTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8);
+    GBufferUnpackShader = std::make_shared<shaderGL>("resources/shaders/GBufferUnpack.vert", "resources/shaders/GBufferUnpack.frag", "GBufferUnpackShader");
+    GBufferUnpackOutputTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8, "GBufferUnpackOutputTexture");
 
 
     cudaDeviceSynchronize();
     // TODO: Make that uint8
     // TonemapTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Uint8);
 
-    RenderTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Half);
+    RenderTexture = std::make_shared<textureGL>(RenderWidth, RenderHeight, textureGL::channels::RGBA, textureGL::types::Half, "RenderTexture");
     RenderTextureMapping = CreateMapping(RenderTexture, /*bWriteOnly */ true, /*bCreateWithMapping*/ true);
 
-    RenderBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
+    RenderBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4), nullptr, "RenderBuffer_0");
     // 必须真的half
     static_assert(sizeof(filter::half4) == (sizeof(float) * 2), "filter::half4 must be 8 bytes");
-    RenderBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
+    RenderBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4), nullptr, "RenderBuffer_1");
 
-    MomentsBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
-    MomentsBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2));
-    
-    FilterBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
-    FilterBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4));
-    
-    HistoryLengthBuffer = std::make_shared<buffer>(RenderWidth * RenderHeight * sizeof(uint8_t));
+    MomentsBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2), nullptr, "MomentsBuffer_0");
+    MomentsBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 2 * sizeof(filter::half2), nullptr, "MomentsBuffer_1");
+
+    FilterBuffer[0] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4), nullptr, "FilterBuffer_0");
+    FilterBuffer[1] = std::make_shared<buffer>(RenderWidth * RenderHeight * 4 * sizeof(filter::half4), nullptr, "FilterBuffer_1");
+
+    HistoryLengthBuffer = std::make_shared<buffer>(RenderWidth * RenderHeight * sizeof(uint8_t), nullptr, "HistoryLengthBuffer");
 
     Scene->Cameras[int(Params.CurrentCamera)].SetAspect((float)RenderWidth / (float)RenderHeight);
     
